@@ -6,3 +6,25 @@
 <a href="https://www.madamecuisine.de/risotto-alla-puttanesca">Test 5</a><br />
 <a href="https://de.crock.recipes/recipes/hahnchen-biryani-ein-fest-fur-die-sinne/">Test 6</a><br />
 <a href="https://www.ungers-kitchen.de/cmsneu/Rezepte/suedtiroler-hirtennudeln/">Test 5</a><br />
+
+
+Features als Wunsch:
+	1. Nachladen Button auf der Startseite, um die Ladezeit zu verringern - unter Berücksichtigung von ColibriWP-Standard-Blogaufbau
+
+https://rezepte.skip-intro.eu/easy-chicken-shawarma-tower-baked-in-the-oven/
+https://rezepte.skip-intro.eu/original-butter-chicken-rezept-murgh-makhni/
+https://rezepte.skip-intro.eu/birria-tacos-ein-kulinarisches-abenteuer-fuer-zuhause/
+https://rezepte.skip-intro.eu/haehnchen-biryani-ein-fest-fuer-die-sinne/
+
+
+Die notes.html nutze ich für Projektnotizen - hat keine Projektrelevanz und stört ja auch dort nicht - oder?
+Können wir grundsätzlich über eine update.diff arbeiten, die immer Ihren Namen behält? Dann kann ich immer recht einfach "git apply update.diff" als Standard nutzen. Vielleicht könnten wir auch eine Batch-Datei ins Verzeichnis legen, die das für mich übernimmt. Außerdem fände ich es super, wenn wir eine Art update.log im Root anlegen würden, bei der wir mit jedem Diff ergänzen, was wir verändert haben. Z.B. mit folgendem Inhalt:
+-------------------
+Version 0.5
+27. August 2025 - 16:32
+Buttonleiste rechts ausgerichtet
+27. August 2025 - 16:35
+Irgendeine andere Änderung
+usw.
+--------------------
+Man könnte dann auch hier die Versionsnummern reinschreiben, wenn wir das Projekt Richtung git pushen.
