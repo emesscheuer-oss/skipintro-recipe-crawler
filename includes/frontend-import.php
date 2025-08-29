@@ -37,7 +37,8 @@ function sitc_render_import_form() {
     // Formular-Verarbeitung
     if (!empty($_POST['sitc_frontend_import']) && !empty($_POST['sitc_recipe_url'])) {
         $url = esc_url_raw($_POST['sitc_recipe_url']);
-        $recipe = sitc_parse_recipe_from_url($url);
+        // Use v2 parser (structured + legacy mapping)
+        $recipe = sitc_parse_recipe_from_url_v2($url);
         if ($recipe) {
             $post_id = wp_insert_post([
                 'post_title'   => !empty($recipe['title']) ? $recipe['title'] : 'Unbenanntes Rezept',
@@ -71,7 +72,15 @@ function sitc_render_import_form() {
                 if (!empty($recipe['instructions']))       update_post_meta($post_id, '_sitc_instructions', $recipe['instructions']);
                 if (isset($recipe['yield_raw']))           update_post_meta($post_id, '_sitc_yield_raw', $recipe['yield_raw']);
                 if (isset($recipe['yield_num']))           update_post_meta($post_id, '_sitc_yield_num', $recipe['yield_num']);
-                update_post_meta($post_id, '_sitc_source_url', $url);
+                update_post_meta($post_id, '_sitc_source_url', !empty($recipe['source_url']) ? $recipe['source_url'] : $url);
+                // Persist richer meta if available
+                if (!empty($recipe['meta'])) {
+                    $meta = $recipe['meta'];
+                    if (!empty($meta['schema_recipe'])) update_post_meta($post_id, '_sitc_schema_recipe_json', wp_json_encode($meta['schema_recipe']));
+                    if (array_key_exists('confidence', $meta)) update_post_meta($post_id, '_sitc_confidence', (float)$meta['confidence']);
+                    if (!empty($meta['sources']))        update_post_meta($post_id, '_sitc_sources_json', wp_json_encode($meta['sources']));
+                    if (!empty($meta['flags']))          update_post_meta($post_id, '_sitc_flags_json', wp_json_encode($meta['flags']));
+                }
 
                 // Featured Image mit Fallbacks
                 $image_url = !empty($recipe['image']) ? $recipe['image'] : '';

@@ -1,3 +1,40 @@
+ZUSATZANWEISUNG FÜR CODEX – CHANGELOG
+
+Bitte aktualisiere auch `CHANGELOG.md`:
+
+- Erhöhe die Version automatisch um **+0.0.1** gegenüber der letzten Version.
+- Verwende das heutige Datum im Format `YYYY-MM-DD`.
+
+
+Hinweise:
+- Wenn es eine Bugfix ist → Kategorie "Fixed"
+- Wenn neue Funktionalität → Kategorie "Added"
+- Wenn etwas entfernt wurde → Kategorie "Removed"
+- Standard = "Changed"
+- Unter **Files** alle Dateien aufführen, die Codex angepasst hat.
+
+
+
+
+AUFGABE
+[Laut Meta-Discussion hier die konkrete Aufgabe eintragen]
+
+ZUSATZ
+Bitte aktualisiere auch `CHANGELOG.md` (Sprache = deutsch):
+- Version automatisch um +0.0.1 gegenüber der letzten Version hochzählen
+- Heutiges Datum eintragen (Format: YYYY-MM-DD)
+- Erstelle einen neuen Block nach folgendem Schema (Füge den neuen Block IMMER ganz oben in CHANGELOG.md ein,
+  so dass die Datei von neu nach alt sortiert ist.):
+
+## [NEUE_VERSION] – DATUM
+### Kategorie
+- Einträge unter "Changed", "Fixed", "Added" oder "Removed" (je nach Aufgabe)
+- Jede Änderung in einem Bulletpoint, kurz und prägnant
+### Files
+- Liste aller Dateien, die in dieser Aufgabe geändert wurden
+
+
+
 <h1>Testseiten</h1>
 <a href="https://experiencelowcarb.net/birria-tacos">Test 1</a><br />
 <a href="https://shibaskitchen.de/original-butter-chicken-rezept/">Test 2</a><br />
@@ -11,292 +48,11 @@
 Features als Wunsch:
 	1. Nachladen Button auf der Startseite, um die Ladezeit zu verringern - unter Berücksichtigung von ColibriWP-Standard-Blogaufbau
 
-https://rezepte.skip-intro.eu/easy-chicken-shawarma-tower-baked-in-the-oven/
-https://rezepte.skip-intro.eu/original-butter-chicken-rezept-murgh-makhni/
-https://rezepte.skip-intro.eu/birria-tacos-ein-kulinarisches-abenteuer-fuer-zuhause/
-https://rezepte.skip-intro.eu/haehnchen-biryani-ein-fest-fuer-die-sinne/
-
-
-Die notes.html nutze ich für Projektnotizen - hat keine Projektrelevanz und stört ja auch dort nicht - oder?
-Können wir grundsätzlich über eine update.diff arbeiten, die immer Ihren Namen behält? Dann kann ich immer recht einfach "git apply update.diff" als Standard nutzen. Vielleicht könnten wir auch eine Batch-Datei ins Verzeichnis legen, die das für mich übernimmt. Außerdem fände ich es super, wenn wir eine Art update.log im Root anlegen würden, bei der wir mit jedem Diff ergänzen, was wir verändert haben. Z.B. mit folgendem Inhalt:
--------------------
-Version 0.5
-27. August 2025 - 16:32
-Buttonleiste rechts ausgerichtet
-27. August 2025 - 16:35
-Irgendeine andere Änderung
-usw.
---------------------
-Man könnte dann auch hier die Versionsnummern reinschreiben, wenn wir das Projekt Richtung git pushen.
-
-<h1 data-start="195" data-end="265">
-    Projektbeschreibung – Skip Intro Recipe Crawler (Stand: Version 0.5)
-</h1>
-<h2 data-start="267" data-end="286">
-    Ziel des Plugins
-</h2>
-<p data-start="287" data-end="338">
-    Das Plugin dient als <strong data-start="308" data-end="335">private Rezept-Sammlung</strong>.
-</p>
-<ul data-start="339" data-end="611">
-    <li data-list-item-id="ee62ec8700ce87db22601943f63acb568" data-start="339" data-end="402">
-        <p data-start="341" data-end="402">
-            Rezepte werden aus externen Quellen per <strong data-start="381" data-end="388">URL</strong> importiert.
-        </p>
-    </li>
-    <li data-list-item-id="ef82ad754a01c4c8474736e9a4d871788" data-start="403" data-end="480">
-        <p data-start="405" data-end="480">
-            Import erfolgt über <strong data-start="425" data-end="449">JSON-LD Recipe-Daten</strong> oder Fallback HTML-Scraping.
-        </p>
-    </li>
-    <li data-list-item-id="e007311d1f36b248f91dae77be3c2135b" data-start="481" data-end="611">
-        <p data-start="483" data-end="611">
-            Inhalte werden in <strong data-start="501" data-end="514">WordPress</strong> gespeichert, sodass Rezepte langfristig verfügbar bleiben, unabhängig von den Ursprungsseiten.
-        </p>
-    </li>
-</ul>
-<hr data-start="613" data-end="616">
-<h2 data-start="618" data-end="629">
-    Umgebung
-</h2>
-<ul data-start="630" data-end="1089">
-    <li data-list-item-id="ee75a3f2f47dd106387030e704e5129e3" data-start="630" data-end="688">
-        <p data-start="632" data-end="688">
-            <strong data-start="632" data-end="653">WordPress Instanz</strong> (nicht öffentlich, rein privat).
-        </p>
-    </li>
-    <li data-list-item-id="ec54ad5a62da04d4c56945dc636070b30" data-start="689" data-end="722">
-        <p data-start="691" data-end="722">
-            <strong data-start="691" data-end="719">Themebuilder: Colibri WP</strong>.
-        </p>
-    </li>
-    <li data-list-item-id="e32add3b67e6b251da1e4980bc1b59dc0" data-start="723" data-end="962">
-        <p data-start="725" data-end="782">
-            Rezepte werden in <strong data-start="743" data-end="770">Standard-Blog-Beiträgen</strong> abgelegt.
-        </p>
-        <ul data-start="785" data-end="962">
-            <li data-list-item-id="e363aac57dc665fd6579e902e42889d34" data-start="785" data-end="885">
-                <p data-start="787" data-end="885">
-                    Klassische Blog-Funktionalitäten wie Archiv, Autorenprofile oder Kommentare sind <strong data-start="868" data-end="882">irrelevant</strong>.
-                </p>
-            </li>
-            <li data-list-item-id="ecae4d625ac7a14855873578203184127" data-start="888" data-end="962">
-                <p data-start="890" data-end="962">
-                    Die Blog-Beiträge dienen ausschließlich als Container für die Rezepte.
-                </p>
-            </li>
-        </ul>
-    </li>
-    <li data-list-item-id="e69f03362ef393628760628fe6792564b" data-start="963" data-end="1089">
-        <p data-start="965" data-end="1089">
-            Colibri-Bausteine wie Kategorien, Schlagwörter, Post-Navigation werden genutzt, damit das Layout einfach steuerbar bleibt.
-        </p>
-    </li>
-</ul>
-<hr data-start="1091" data-end="1094">
-<h2 data-start="1096" data-end="1105">
-    Import
-</h2>
-<ul data-start="1106" data-end="1649">
-    <li data-list-item-id="effdc923aee2db4946255163845c6b8d0" data-start="1106" data-end="1159">
-        <p data-start="1108" data-end="1159">
-            Im Backend gibt es ein Menü „Rezept importieren“.
-        </p>
-    </li>
-    <li data-list-item-id="e9c0299df3ebdf137a6bb11c3d7189138" data-start="1160" data-end="1246">
-        <p data-start="1162" data-end="1246">
-            Eingabe einer URL → Rezept wird ausgelesen, strukturiert und als Beitrag erstellt.
-        </p>
-    </li>
-    <li data-list-item-id="e7aa61470cd6e50284e45af069acfcbe4" data-start="1247" data-end="1467">
-        <p data-start="1249" data-end="1262">
-            Kategorien:
-        </p>
-        <ul data-start="1265" data-end="1467">
-            <li data-list-item-id="e76d7143aa15cc35bd6659790fbfe7294" data-start="1265" data-end="1316">
-                <p data-start="1267" data-end="1316">
-                    Auswahl über Checkboxen vorhandener Kategorien.
-                </p>
-            </li>
-            <li data-list-item-id="ea1c3c690d541190661803fe35a5dcb2e" data-start="1319" data-end="1394">
-                <p data-start="1321" data-end="1394">
-                    Neue Kategorien können als Freitext (kommagetrennt) hinzugefügt werden.
-                </p>
-            </li>
-            <li data-list-item-id="e9edf9d252164fead05e9d8f031631407" data-start="1397" data-end="1467">
-                <p data-start="1399" data-end="1467">
-                    Kategorien aus der Quelle werden <strong data-start="1432" data-end="1453">nicht automatisch</strong> übernommen.
-                </p>
-            </li>
-        </ul>
-    </li>
-    <li data-list-item-id="ebd5180d8a53b584c6ed3793f5b34f8c7" data-start="1468" data-end="1551">
-        <p data-start="1470" data-end="1551">
-            Quelle-URL wird mitgespeichert und im Frontend unterhalb des Rezepts angezeigt.
-        </p>
-    </li>
-    <li data-list-item-id="e3c4ced28bd9d3af6d7262f1323490391" data-start="1552" data-end="1649">
-        <p data-start="1554" data-end="1563">
-            Bilder:
-        </p>
-        <ul data-start="1566" data-end="1649">
-            <li data-list-item-id="ec87329dd97189110c872e2e564e38c91" data-start="1566" data-end="1599">
-                <p data-start="1568" data-end="1599">
-                    Zuerst Rezeptbild aus Quelle.
-                </p>
-            </li>
-            <li data-list-item-id="e70f23bd3f34cd7cdc0bb446a48170a8f" data-start="1602" data-end="1649">
-                <p data-start="1604" data-end="1649">
-                    Fallback: Kategorie-Bild oder Standardbild.
-                </p>
-            </li>
-        </ul>
-    </li>
-</ul>
-<hr data-start="1651" data-end="1654">
-<h2 data-start="1656" data-end="1682">
-    Darstellung im Frontend
-</h2>
-<ul data-start="1683" data-end="2344">
-    <li data-list-item-id="e7c7bf073528c8206041e5aa07274c229" data-start="1683" data-end="2020">
-        <p data-start="1685" data-end="1706">
-            Jedes Rezept zeigt:
-        </p>
-        <ul data-start="1709" data-end="2020">
-            <li data-list-item-id="e36e640df86527d5b6dd105da27e5d4f1" data-start="1709" data-end="1773">
-                <p data-start="1711" data-end="1773">
-                    Titel und Beschreibung (aus Standard-Beitrag + Parserdaten).
-                </p>
-            </li>
-            <li data-list-item-id="e3057a176683b6b321e7deeacfdbfff30" data-start="1776" data-end="1861">
-                <p data-start="1778" data-end="1861">
-                    Zutatenliste mit <strong data-start="1795" data-end="1821">Checkboxen zum Abhaken</strong> (durchgestrichener Text bei Auswahl).
-                </p>
-            </li>
-            <li data-list-item-id="e1e7312cc2d771f7f748745a907d14c76" data-start="1864" data-end="1915">
-                <p data-start="1866" data-end="1915">
-                    Zubereitungsschritte (geordnetes OL/LI-Format).
-                </p>
-            </li>
-            <li data-list-item-id="e7dc28f1c67bf0db0a05f3d11c2a94f8e" data-start="1918" data-end="1980">
-                <p data-start="1920" data-end="1980">
-                    Personenanzahl mit <strong data-start="1939" data-end="1963">skalierbaren Zutaten</strong> (+/- Buttons).
-                </p>
-            </li>
-            <li data-list-item-id="e3cc29701a77d7546630b5fa6af8f4d06" data-start="1983" data-end="2020">
-                <p data-start="1985" data-end="2020">
-                    Quelle-URL als Link zum Original.
-                </p>
-            </li>
-        </ul>
-    </li>
-    <li data-list-item-id="e74ee486501b483af807ca3ff05620f27" data-start="2021" data-end="2264">
-        <p data-start="2023" data-end="2094">
-            Zusätzliche Buttons (Version 0.5 vorbereitet, noch nicht funktional):
-        </p>
-        <ul data-start="2097" data-end="2264">
-            <li data-list-item-id="e6aaca55182a51ec09d42a8a667395e71" data-start="2097" data-end="2145">
-                <p data-start="2099" data-end="2145">
-                    Einkaufsliste (Akkordeon mit allen Zutaten).
-                </p>
-            </li>
-            <li data-list-item-id="e0695f68ccc51dc64ad253d793326d950" data-start="2148" data-end="2185">
-                <p data-start="2150" data-end="2185">
-                    Bildschirm-anlassen (für Mobile).
-                </p>
-            </li>
-            <li data-list-item-id="e6f9ee861db4143e5c8130f7675146630" data-start="2188" data-end="2215">
-                <p data-start="2190" data-end="2215">
-                    Rezept löschen (Trash).
-                </p>
-            </li>
-            <li data-list-item-id="ec72c55f6ce8164b2703d618e3e92aa4a" data-start="2218" data-end="2264">
-                <p data-start="2220" data-end="2264">
-                    Foto hinzufügen (später Galerie-Funktion).
-                </p>
-            </li>
-        </ul>
-    </li>
-    <li data-list-item-id="e0f9f0a27a6daf5c8eea7b9aff178e1ec" data-start="2265" data-end="2344">
-        <p data-start="2267" data-end="2344">
-            <strong data-start="2267" data-end="2274">CSS</strong> sorgt für einheitliche Optik (Buttons schwarz, rund, rechtsbündig).
-        </p>
-    </li>
-</ul>
-<hr data-start="2346" data-end="2349">
-<h2 data-start="2351" data-end="2373">
-    Parser (Status 0.5)
-</h2>
-<ul data-start="2374" data-end="2736">
-    <li data-list-item-id="edd7b1afe78460197ae93d0b5d7540558" data-start="2374" data-end="2456">
-        <p data-start="2376" data-end="2456">
-            Erkennt Titel, Beschreibung, Zutaten, Zubereitungsschritte, Portionen, Bilder.
-        </p>
-    </li>
-    <li data-list-item-id="e6c49a146877d2778ebdc494075bb0095" data-start="2457" data-end="2736">
-        <p data-start="2459" data-end="2485">
-            Probleme in Version 0.5:
-        </p>
-        <ul data-start="2488" data-end="2736">
-            <li data-list-item-id="e6f2722227b4b9db7bb5019b5ee2d4d24" data-start="2488" data-end="2578">
-                <p data-start="2490" data-end="2578">
-                    Manche Einheiten oder Zutaten werden falsch zerlegt (z. B. „Lorbeerblätter“ → „tter“).
-                </p>
-            </li>
-            <li data-list-item-id="edfd3dc8e5fc86cb1a8e250478b7b387d" data-start="2581" data-end="2631">
-                <p data-start="2583" data-end="2631">
-                    Brüche (½) werden nicht immer korrekt erkannt.
-                </p>
-            </li>
-            <li data-list-item-id="e47fcb7e50154d200b251b4cd34ab5188" data-start="2634" data-end="2736">
-                <p data-start="2636" data-end="2736">
-                    Zutatenblöcke („TOPPING: …“) werden aktuell als normale Zutat statt Zwischenüberschrift behandelt.
-                </p>
-            </li>
-        </ul>
-    </li>
-</ul>
-<hr data-start="2738" data-end="2741">
-<h2 data-start="2743" data-end="2770">
-    Status Quo (Version 0.5)
-</h2>
-<ul data-start="2771" data-end="3166">
-    <li data-list-item-id="ed52f0d65354f7bc3421e3fb247397fa5" data-start="2771" data-end="2920">
-        <p data-start="2773" data-end="2802">
-            Plugin funktioniert stabil:
-        </p>
-        <ul data-start="2805" data-end="2920">
-            <li data-list-item-id="ee45dd883a1b3e6a72a88d308bb85e3f8" data-start="2805" data-end="2856">
-                <p data-start="2807" data-end="2856">
-                    Rezepte können importiert und angezeigt werden.
-                </p>
-            </li>
-            <li data-list-item-id="e15a76cef9f65e54e5496686b98573ea0" data-start="2859" data-end="2920">
-                <p data-start="2861" data-end="2920">
-                    Checkboxen, Durchstreichen und Skalierung sind vorhanden.
-                </p>
-            </li>
-        </ul>
-    </li>
-    <li data-list-item-id="e7879bd79577b030b47f94c9ed07cb344" data-start="2921" data-end="3016">
-        <p data-start="2923" data-end="3016">
-            Funktionsbuttons (Foto/Einkauf/Trash/Screen-On) sind sichtbar, aber <strong data-start="2991" data-end="3013">noch ohne Funktion</strong>.
-        </p>
-    </li>
-    <li data-list-item-id="e4ca01b6ad1ea520c5f88d23b39d6b953" data-start="3017" data-end="3098">
-        <p data-start="3019" data-end="3098">
-            Parser liefert Grundfunktionen, braucht aber Verbesserungen bei Sonderfällen.
-        </p>
-    </li>
-    <li data-list-item-id="ed9e38447d61d9194e4559d82ed8a2ecf" data-start="3099" data-end="3166">
-        <p data-start="3101" data-end="3166">
-            GitHub-Repository vorhanden, Stand eingefroren mit Version 0.5.
-        </p>
-    </li>
-</ul>
-<hr data-start="3168" data-end="3171">
-<p data-start="3173" data-end="3323">
-    👉 Damit ist das Projekt bereit für die nächste Entwicklungsphase: <strong data-start="3240" data-end="3266">Parser verbessern (F2)</strong> und <strong data-start="3271" data-end="3320">Frontend-Buttons um Funktionen erweitern (F1)</strong>.
-</p>
-<div class="raw-html-embed">
-</div>
+Quelle: <a target="_blank" href="https://mydeliciousmeals.com/recipe/easy-chicken-shawarma-tower-baked-in-the-oven">https://mydeliciousmeals.com/recipe/easy-chicken-shawarma-tower-baked-in-the-oven</a><br />
+Ergebnis: <a target="_blank" href="https://rezepte.skip-intro.eu/easy-chicken-shawarma-tower-baked-in-the-oven/">easy-chicken-shawarma-tower-baked-in-the-oven</a><br />
+Quelle: <a target="_blank" href="https://shibaskitchen.de/original-butter-chicken-rezept/">original-butter-chicken-rezept</a><br />
+Ergebnis: <a target="_blank" href="https://rezepte.skip-intro.eu/original-butter-chicken-rezept-murgh-makhni/">original-butter-chicken-rezept</a><br />
+Quelle: <a target="_blank" href="https://experiencelowcarb.net/birria-tacos">birria-tacos</a><br />
+Ergebnis: <a target="_blank" href="https://rezepte.skip-intro.eu/birria-tacos-ein-kulinarisches-abenteuer-fuer-zuhause/">birria-tacos</a><br />
+Quelle: <a target="_blank" href="https://de.crock.recipes/recipes/hahnchen-biryani-ein-fest-fur-die-sinne/">hahnchen-biryani-ein-fest-fur-die-sinne</a><br />
+Ergebnis: <a target="_blank" href="https://rezepte.skip-intro.eu/haehnchen-biryani-ein-fest-fuer-die-sinne/">hahnchen-biryani-ein-fest-fur-die-sinne</a><br />

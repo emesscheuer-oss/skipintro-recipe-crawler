@@ -29,7 +29,8 @@ function sitc_render_importer_page() {
         <?php
         if (!empty($_POST['sitc_recipe_url'])) {
             $url = esc_url_raw($_POST['sitc_recipe_url']);
-            $recipe = sitc_parse_recipe_from_url($url);
+            // Use v2 parser that returns legacy + rich meta
+            $recipe = sitc_parse_recipe_from_url_v2($url);
 
             if ($recipe) {
                 // Debug-Ausgabe
@@ -72,7 +73,15 @@ function sitc_render_importer_page() {
                     if (!empty($recipe['instructions']))       update_post_meta($post_id, '_sitc_instructions',       $recipe['instructions']);
                     if (isset($recipe['yield_raw']))           update_post_meta($post_id, '_sitc_yield_raw',          $recipe['yield_raw']);
                     if (isset($recipe['yield_num']))           update_post_meta($post_id, '_sitc_yield_num',          $recipe['yield_num']);
-                    if (!empty($url))                          update_post_meta($post_id, '_sitc_source_url',         $url);
+                    update_post_meta($post_id, '_sitc_source_url', !empty($recipe['source_url']) ? $recipe['source_url'] : $url);
+                    // Rich parse meta
+                    if (!empty($recipe['meta'])) {
+                        $meta = $recipe['meta'];
+                        if (!empty($meta['schema_recipe'])) update_post_meta($post_id, '_sitc_schema_recipe_json', wp_json_encode($meta['schema_recipe']));
+                        if (array_key_exists('confidence', $meta)) update_post_meta($post_id, '_sitc_confidence', (float)$meta['confidence']);
+                        if (!empty($meta['sources']))        update_post_meta($post_id, '_sitc_sources_json', wp_json_encode($meta['sources']));
+                        if (!empty($meta['flags']))          update_post_meta($post_id, '_sitc_flags_json', wp_json_encode($meta['flags']));
+                    }
 
                     // Featured Image
                     $image_url = !empty($recipe['image']) ? $recipe['image'] : '';
