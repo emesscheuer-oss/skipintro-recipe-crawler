@@ -5,6 +5,17 @@ function sitc_render_importer_page() {
     ?>
     <div class="wrap">
         <h1>Rezept importieren</h1>
+        <div class="notice" style="padding:10px;background:#fff;border:1px solid #ccd0d4;margin:10px 0;">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:flex;align-items:center;gap:10px;">
+                <?php wp_nonce_field('sitc_dev_mode_toggle', 'sitc_dev_mode_nonce'); ?>
+                <input type="hidden" name="action" value="sitc_toggle_dev_mode">
+                <label style="margin:0;display:flex;align-items:center;gap:6px;">
+                    <input type="checkbox" name="enable" value="1" <?php checked(function_exists('sitc_is_dev_mode') && sitc_is_dev_mode()); ?>>
+                    <strong>Dev-Mode</strong> (steuert Dry-Run im Refresh)
+                </label>
+                <?php submit_button('Speichern', 'secondary', 'submit', false); ?>
+            </form>
+        </div>
         <form method="post">
             <input type="url" name="sitc_recipe_url" placeholder="Rezept-URL eingeben" size="60" required><br><br>
 

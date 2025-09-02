@@ -20,6 +20,102 @@ function sitc_normalize_scalar_number($value, $default = 2) {
     return $v > 0 ? $v : $default;
 }
 
+// Einheitenausgabe (DE) – nur Anzeige-Mapping
+// Siehe DEV_NOTES.md: „Einheiten-Policy (DE)“
+function sitc_unit_to_de($unit) {
+    $u = trim(mb_strtolower((string)$unit, 'UTF-8'));
+    if ($u === '') return '';
+    $map = [
+        'tsp' => 'TL', 'teaspoon' => 'TL', 'teaspoons' => 'TL', 'tl' => 'TL',
+        'tbsp' => 'EL', 'tablespoon' => 'EL', 'tablespoons' => 'EL', 'el' => 'EL',
+        'cup' => 'Tasse', 'cups' => 'Tasse', 'tasse' => 'Tasse',
+        'piece' => 'Stück', 'pieces' => 'Stück', 'stück' => 'Stück', 'stueck' => 'Stück',
+        'pinch' => 'Prise', 'prisen' => 'Prise', 'prise' => 'Prise',
+        'can' => 'Dose', 'dose' => 'Dose',
+        'bunch' => 'Bund', 'bund' => 'Bund',
+        'g' => 'g', 'gram' => 'g', 'grams' => 'g', 'gramm' => 'g',
+        'kg' => 'kg',
+        'ml' => 'ml', 'milliliter' => 'ml', 'millilitre' => 'ml',
+        'l' => 'l', 'liter' => 'l', 'litre' => 'l',
+        'oz' => 'oz', 'ounce' => 'oz', 'ounces' => 'oz',
+        'lb' => 'lb', 'pound' => 'lb', 'pounds' => 'lb',
+    ];
+    return $map[$u] ?? $unit;
+}
+
+// Helper: Unicode-Brüche → ASCII (Vor-Normalisierung für Mengen)
+function sitc_replace_unicode_fractions(string $s): string {
+    $map = [
+        '½' => '1/2', '¼' => '1/4', '¾' => '3/4',
+        '⅓' => '1/3', '⅔' => '2/3',
+        '⅛' => '1/8', '⅜' => '3/8', '⅝' => '5/8', '⅞' => '7/8',
+    ];
+    return strtr($s, $map);
+}
+
+// Mengen-Parsing: Einzelwert oder Bereich (a-b)
+function sitc_parse_qty_or_range($qty): array {
+    $res = ['low'=>null, 'high'=>null, 'isRange'=>false];
+    if ($qty === null) return $res;
+    $s = trim((string)$qty);
+    if ($s === '') return $res;
+    $s = sitc_replace_unicode_fractions($s);
+    $s = preg_replace('/\s*\/\s*/', '/', $s); // Spaces um "/" entfernen
+    $s = str_replace(['–','—',' to '], ['-','-','-'], $s); // Bereichsseparatoren
+
+    $toFloat = function(string $t){
+        $t = trim($t);
+        $t = sitc_replace_unicode_fractions($t);
+        $t = preg_replace('/\s*\/\s*/', '/', $t);
+        if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $t, $m)) {
+            return (float)$m[1] + ((float)$m[2]/max(1,(float)$m[3]));
+        }
+        if (preg_match('/^(\d+)\/(\d+)$/', $t, $m)) {
+            return ((float)$m[1])/max(1,(float)$m[2]);
+        }
+        if (preg_match('/^\d+(?:[\.,]\d+)?$/', $t)) {
+            return (float)str_replace(',', '.', $t);
+        }
+        return null;
+    };
+
+    if (preg_match('/^(.+?)\s*-\s*(.+)$/', $s, $rm)) {
+        $a = $toFloat($rm[1]); $b = $toFloat($rm[2]);
+        if ($a !== null && $b !== null) { $res['low']=$a; $res['high']=$b; $res['isRange']=true; return $res; }
+    }
+    $v = $toFloat($s);
+    if ($v !== null) { $res['low'] = $v; }
+    return $res;
+}
+
+// Anzeige-Format (DE) mit Ganzzahl-Schwelle
+function sitc_format_qty_display($val): string {
+    if ($val === null) return '';
+    $v = (float)$val;
+    if (abs($v - round($v)) < 0.01) $v = round($v);
+    $s = number_format($v, 2, ',', '');
+    return rtrim(rtrim($s, '0'), ',');
+}
+
+// Mengen-Parsing: 1/2, 1 1/2, ½, 1,5 => float
+function sitc_coerce_qty_float($qty) {
+    if ($qty === null) return null;
+    $s = trim((string)$qty);
+    if ($s === '') return null;
+    $s = strtr($s, ['½'=>'1/2','¼'=>'1/4','¾'=>'3/4','⅓'=>'1/3','⅔'=>'2/3','⅛'=>'1/8','⅜'=>'3/8','⅝'=>'5/8','⅞'=>'7/8']);
+    if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $s, $m)) { return (float)$m[1] + ((float)$m[2]/max(1,(float)$m[3])); }
+    if (preg_match('/^(\d+)\/(\d+)$/', $s, $m)) { return ((float)$m[1])/max(1,(float)$m[2]); }
+    if (preg_match('/^(\d+(?:[\.,]\d+)?)\s*[-–]\s*\d+(?:[\.,]\d+)?$/u', $s, $m)) { return (float)str_replace(',', '.', $m[1]); }
+    if (preg_match('/^\d+(?:[\.,]\d+)?$/', $s)) { return (float)str_replace(',', '.', $s); }
+    return null;
+}
+
+function sitc_format_qty_de($val) {
+    if ($val === null) return '';
+    $s = number_format((float)$val, 2, ',', '');
+    return rtrim(rtrim($s, '0'), ',');
+}
+
 /**
  * Renderer
  */
@@ -94,23 +190,34 @@ function sitc_render_recipe_shortcode($post_id = 0) {
             <h3>Zutaten</h3>
             <ul class="sitc-ingredients" data-base-servings="<?php echo esc_attr($yield_num); ?>">
                 <?php foreach ($ingredients as $ing):
-                    $qty  = $ing['qty'] ?? '';
-                    $unit = $ing['unit'] ?? '';
-                    $name = $ing['name'] ?? '';
-
-                    $disp = $qty;
-                    if ($disp !== '' && is_numeric(str_replace(',', '.', (string)$disp))) {
-                        $n = (float)str_replace(',', '.', (string)$disp);
-                        $disp = rtrim(rtrim(number_format($n, 2, ',', ''), '0'), ',');
+                    $qtyRaw  = $ing['qty'] ?? '';
+                    $unitRaw = $ing['unit'] ?? '';
+                    $name    = $ing['name'] ?? '';
+                    $qInfo   = sitc_parse_qty_or_range($qtyRaw);
+                    if ($qInfo['isRange']) {
+                        $dispQty = sitc_format_qty_display($qInfo['low']) . '–' . sitc_format_qty_display($qInfo['high']);
+                    } elseif ($qInfo['low'] !== null) {
+                        $dispQty = sitc_format_qty_display($qInfo['low']);
+                    } else {
+                        $dispQty = trim((string)$qtyRaw);
                     }
-                    $id_for = 'sitc_chk_' . $post_id . '_' . md5($qty.'|'.$unit.'|'.$name);
+                    $unitDe  = sitc_unit_to_de($unitRaw);
+
+                    $id_for = 'sitc_chk_' . $post_id . '_' . md5($qtyRaw.'|'.$unitRaw.'|'.$name);
                     ?>
-                    <li class="sitc-ingredient" data-qty="<?php echo esc_attr($qty); ?>" data-unit="<?php echo esc_attr($unit); ?>" data-name="<?php echo esc_attr($name); ?>">
+                    <li class="sitc-ingredient"
+                        <?php if ($qInfo['isRange']): ?>
+                            data-qty-low="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['low'])); ?>"
+                            data-qty-high="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['high'])); ?>"
+                        <?php else: ?>
+                            data-qty="<?php echo esc_attr($qInfo['low'] !== null ? str_replace(',','.', (string)$qInfo['low']) : ''); ?>"
+                        <?php endif; ?>
+                        data-unit="<?php echo esc_attr($unitDe); ?>" data-name="<?php echo esc_attr($name); ?>">
                         <label for="<?php echo esc_attr($id_for); ?>">
                             <input type="checkbox" id="<?php echo esc_attr($id_for); ?>" class="sitc-chk">
                             <span class="sitc-line">
-                                <span class="sitc-qty"><?php echo esc_html($disp); ?></span>
-                                <?php if ($unit !== ''): ?><span class="sitc-unit"> <?php echo esc_html($unit); ?></span><?php endif; ?>
+                                <span class="sitc-qty"><?php echo esc_html($dispQty); ?></span>
+                                <?php if ($unitDe !== ''): ?><span class="sitc-unit"> <?php echo esc_html($unitDe); ?></span><?php endif; ?>
                                 <span class="sitc-name"> <?php echo esc_html($name); ?></span>
                             </span>
                         </label>
@@ -122,16 +229,20 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                 <h4>Einkaufsliste</h4>
                 <ul>
                     <?php foreach ($ingredients as $ing):
-                        $qty  = $ing['qty'] ?? '';
-                        $unit = $ing['unit'] ?? '';
-                        $name = $ing['name'] ?? '';
-                        $disp = $qty;
-                        if ($disp !== '' && is_numeric(str_replace(',', '.', (string)$disp))) {
-                            $n = (float)str_replace(',', '.', (string)$disp);
-                            $disp = rtrim(rtrim(number_format($n, 2, ',', ''), '0'), ',');
+                        $qtyRaw  = $ing['qty'] ?? '';
+                        $unitRaw = $ing['unit'] ?? '';
+                        $name    = $ing['name'] ?? '';
+                        $qInfo   = sitc_parse_qty_or_range($qtyRaw);
+                        if ($qInfo['isRange']) {
+                            $dispQty = sitc_format_qty_display($qInfo['low']) . '–' . sitc_format_qty_display($qInfo['high']);
+                        } elseif ($qInfo['low'] !== null) {
+                            $dispQty = sitc_format_qty_display($qInfo['low']);
+                        } else {
+                            $dispQty = trim((string)$qtyRaw);
                         }
+                        $unitDe  = sitc_unit_to_de($unitRaw);
                         ?>
-                        <li><?php echo esc_html(trim($disp.' '.($unit ? $unit.' ' : '').$name)); ?></li>
+                        <li><?php echo esc_html(trim(($dispQty !== '' ? $dispQty.' ' : '').($unitDe ? $unitDe.' ' : '').$name)); ?></li>
                     <?php endforeach; ?>
                 </ul>
             </div>

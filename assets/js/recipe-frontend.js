@@ -29,6 +29,45 @@
     });
   }
 
+  // Override recalc with range-aware scaling
+  function recalc($root){
+    var base = parseFloat($root.find('.sitc-ingredients').attr('data-base-servings')) || 1;
+    var cur  = parseFloat($root.find('.sitc-servings').val()) || base;
+    $root.find('.sitc-servings-display').text(formatDE(cur));
+
+    $root.find('.sitc-ingredient').each(function(){
+      var $li  = $(this);
+      var qty  = $li.attr('data-qty');
+      var qtyLo = $li.attr('data-qty-low');
+      var qtyHi = $li.attr('data-qty-high');
+      var unit = $li.attr('data-unit') || '';
+      if (qty === '' || qty === null) return; // keine Zahl
+
+      var factor = (cur / base);
+      var setQtyText = function(text){
+        $li.find('.sitc-qty').text(text);
+        if (unit) $li.find('.sitc-unit').text(' ' + unit);
+      };
+
+      if (typeof qtyLo !== 'undefined' && typeof qtyHi !== 'undefined' && qtyLo !== null && qtyHi !== null) {
+        var lo = parseFloat((qtyLo+'').replace(',','.'));
+        var hi = parseFloat((qtyHi+'').replace(',','.'));
+        if (!isNaN(lo) && !isNaN(hi)) {
+          var slo = lo * factor;
+          var shi = hi * factor;
+          setQtyText(formatDE(slo) + '–' + formatDE(shi));
+          return;
+        }
+      }
+
+      var baseQty = parseFloat((qty+'').replace(',','.'));
+      if (isNaN(baseQty)) return;
+
+      var scaled = baseQty * factor;
+      setQtyText(formatDE(scaled));
+    });
+  }
+
   function toggleGrocery($btn){
     var target = $btn.attr('data-target');
     var $box = $(target);

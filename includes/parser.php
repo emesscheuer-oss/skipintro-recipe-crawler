@@ -193,6 +193,22 @@ function sitc_parse_recipe_from_url_v2(string $url) {
         }
     }
 
+    // De-Dupe final structured list (case-/diacritics-/whitespace-insensitiv über die kombinierte Zeile)
+    if (!empty($ingredients_struct)) {
+        $seen = [];
+        $uniq = [];
+        foreach ($ingredients_struct as $ing) {
+            $qty  = trim((string)($ing['qty'] ?? ''));
+            $unit = trim((string)($ing['unit'] ?? ''));
+            $name = trim((string)($ing['name'] ?? ''));
+            $line = trim(($qty !== '' ? $qty.' ' : '').($unit !== '' ? $unit.' ' : '').$name);
+            $key = sitc_canon_key($line);
+            if ($key === '') continue;
+            if (!isset($seen[$key])) { $seen[$key] = true; $uniq[] = $ing; }
+        }
+        $ingredients_struct = $uniq;
+    }
+
     $instructions = [];
     if (!empty($r['recipeInstructions']) && is_array($r['recipeInstructions'])) {
         foreach ($r['recipeInstructions'] as $st) {
@@ -597,14 +613,27 @@ function sitc_normalize_recipe(array $recipe, DOMDocument $doc, ?string $pageUrl
     if (isset($recipe['recipeIngredient'])) {
         $ingList = $recipe['recipeIngredient'];
         if (!is_array($ingList)) $ingList = [$ingList];
-        $ingList = array_values(array_filter(array_map(function($s){ return sitc_clean_text((string)$s); }, $ingList), function($s){ return $s !== ''; }));
+        $ind = array_values(array_filter(array_map(function($s){ return sitc_clean_text((string)$s); }, $ingList), function($s){ return $s !== ''; }));
+        // De-Dupe (case-/diacritics-/whitespace-insensitiv)
+        $seen = [];
+        $dedup = [];
+        foreach ($ind as $line) {
+            $key = sitc_canon_key($line);
+            if ($key === '') continue;
+            if (!isset($seen[$key])) { $seen[$key] = true; $dedup[] = $line; }
+        }
+        $ingList = $dedup;
     }
     $recipe['recipeIngredient'] = $ingList;
 
     // Create ingredientsParsed
     $parsed = [];
     foreach ($ingList as $raw) {
-        $parsed[] = sitc_parse_ingredient_line_v2($raw);
+        if (function_exists('sitc_parse_ingredient_line_v3')) {
+            $parsed[] = sitc_parse_ingredient_line_v3($raw);
+        } else {
+            $parsed[] = sitc_parse_ingredient_line_v2($raw);
+        }
     }
     $recipe['ingredientsParsed'] = $parsed;
 
@@ -825,6 +854,21 @@ function sitc_clean_text($val): string {
     return sitc_nfc($s);
 }
 
+// Build a canonical key for de-duplication: trim, collapse whitespace, lower-case, remove diacritics
+function sitc_canon_key(string $s): string {
+    $t = html_entity_decode(strip_tags($s), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $t = preg_replace('/\s+/u', ' ', $t);
+    $t = trim($t);
+    if ($t === '') return '';
+    $t = mb_strtolower($t, 'UTF-8');
+    // Remove diacritics via NFD + strip combining marks
+    if (function_exists('normalizer_normalize')) {
+        $nfd = normalizer_normalize($t, Normalizer::FORM_D);
+        if ($nfd !== false) $t = preg_replace('/\p{Mn}+/u', '', $nfd);
+    }
+    return $t;
+}
+
 function sitc_make_absolute_url(?string $url, ?string $base): string {
     $u = trim((string)$url);
     if ($u === '') return '';
@@ -956,4 +1000,76 @@ function sitc_parse_instructions($input) {
     }
 
     return $steps;
+}
+
+// --- Enhanced ingredient line parser (v3) ---
+// Robust für Brüche/Dezimal, Bereiche a-b, gemischte Zahlen, Freitext-Heuristik ("Saft einer halben Zitrone")
+if (!function_exists('sitc_parse_ingredient_line_v3')) {
+function sitc_parse_ingredient_line_v3(string $raw): array {
+    $orig = $raw;
+    $raw = sitc_clean_text($raw);
+    $raw = strtr($raw, [
+        '½'=>' 1/2','¼'=>' 1/4','¾'=>' 3/4','⅓'=>' 1/3','⅔'=>' 2/3',
+        '⅛'=>' 1/8','⅜'=>' 3/8','⅝'=>' 5/8','⅞'=>' 7/8',
+        '–'=>'-','—'=>'-'
+    ]);
+    $raw = preg_replace('/\s*\/\s*/', '/', $raw);
+
+    $aliases = [
+        'tl'=>'tsp','teelöffel'=>'tsp','teeloeffel'=>'tsp','tsp'=>'tsp',
+        'el'=>'tbsp','esslöffel'=>'tbsp','essloeffel'=>'tbsp','tbsp'=>'tbsp',
+        'tasse'=>'cup','cup'=>'cup','prise'=>'pinch','pinch'=>'pinch',
+        'stück'=>'piece','stueck'=>'piece','piece'=>'piece','dose'=>'can','can'=>'can',
+        'bund'=>'bunch','bunch'=>'bunch','g'=>'g','gramm'=>'g','kg'=>'kg','ml'=>'ml','l'=>'l','liter'=>'l',
+        'oz'=>'oz','lb'=>'lb'
+    ];
+
+    $toFloat = function(string $t){
+        $t = trim($t);
+        $t = preg_replace('/\s*\/\s*/', '/', $t);
+        if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $t, $m)) return (float)$m[1] + ((float)$m[2]/max(1,(float)$m[3]));
+        if (preg_match('/^(\d+)\/(\d+)$/', $t, $m)) return ((float)$m[1])/max(1,(float)$m[2]);
+        if (preg_match('/^\d+(?:[\.,]\d+)?$/', $t)) return (float)str_replace(',', '.', $t);
+        return null;
+    };
+
+    $qty=null; $unit=null; $item=''; $note=null;
+
+    // Bereich a-b
+    if (preg_match('/^\s*([^\s]+)\s*-\s*([^\s]+)\s*(\p{L}+)?\s*(.*)$/u', $raw, $m)) {
+        $a = $toFloat($m[1]); $b=$toFloat($m[2]);
+        if ($a !== null && $b !== null) {
+            $qty = str_replace(',', '.', (string)$a) . '-' . str_replace(',', '.', (string)$b);
+            $u = mb_strtolower(trim($m[3] ?? ''), 'UTF-8'); if ($u !== '') $unit = $aliases[$u] ?? $u;
+            $rest = trim($m[4] ?? '');
+            if (preg_match('/^(.*)\(([^\)]+)\)\s*$/', $rest, $n)) { $item = trim($n[1]); $note = trim($n[2]); }
+            else $item = $rest;
+            return ['qty'=>$qty,'unit'=>$unit,'item'=>$item,'note'=>$note,'raw'=>$orig];
+        }
+    }
+
+    // Einzelzahl
+    if (preg_match('/^\s*([\d\.,\/\s]+)\s*(\p{L}+)?\s*(.*)$/u', $raw, $m)) {
+        $qv = $toFloat(trim($m[1]));
+        if ($qv !== null) {
+            $qty = str_replace(',', '.', (string)$qv);
+            $u = mb_strtolower(trim($m[2] ?? ''), 'UTF-8'); if ($u !== '') $unit = $aliases[$u] ?? $u;
+            $rest = trim($m[3] ?? '');
+            if (preg_match('/^(.*)\(([^\)]+)\)\s*$/', $rest, $n)) { $item = trim($n[1]); $note = trim($n[2]); }
+            else $item = $rest;
+            return ['qty'=>$qty,'unit'=>$unit,'item'=>$item,'note'=>$note,'raw'=>$orig];
+        }
+    }
+
+    // Freitext-Heuristik
+    if (preg_match('/\b(saft|schale|abrieb|zeste)\b.*\b(einer|einem|eines)?\s*(halben|1\/2|½)\s+(zitrone|limette|orange)\b/i', $raw, $m)) {
+        $note = ucfirst(mb_strtolower($m[1], 'UTF-8'));
+        $item = ucfirst(mb_strtolower($m[4], 'UTF-8'));
+        $qty = '0.5';
+        $unit = 'piece';
+        return ['qty'=>$qty,'unit'=>$unit,'item'=>$item,'note'=>$note,'raw'=>$orig];
+    }
+
+    return ['qty'=>null,'unit'=>null,'item'=>$orig,'note'=>null,'raw'=>$orig,'ambiguous'=>true];
+}
 }
