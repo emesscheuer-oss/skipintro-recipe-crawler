@@ -847,11 +847,38 @@ function sitc_query_selector(DOMXPath $xp, string $selector, ?DOMNode $context=n
     return $xp->query($xpath, $context);
 }
 
-function sitc_clean_text($val): string {
+// Global text sanitization for all incoming strings
+// - HTML entities decode
+// - Strip tags, collapse whitespace
+// - Normalize to UTF-8 NFC
+// - Common UTF-8 mojibake fixes
+function sitc_text_sanitize($val): string {
     $s = is_string($val) ? $val : json_encode($val);
-    $s = html_entity_decode(strip_tags($s), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    $s = trim(preg_replace('/\s+/u', ' ', $s));
-    return sitc_nfc($s);
+    // Normalize NBSP and narrow NBSP to regular spaces
+    $s = str_replace(["\xC2\xA0","\xE2\x80\xAF"], ' ', $s);
+    // 1) Decode entities first
+    $s = html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    // 2) NFC normalize early to stabilize sequences
+    $s = sitc_nfc($s);
+    // 3) Mojibake fixes (common pairs)
+    $map = [
+        'StÃ¼ck' => 'Stück', 'Ã¼' => 'ü', 'Ã¶' => 'ö', 'Ã¤' => 'ä', 'ÃŸ' => 'ß',
+        'Ã„' => 'Ä', 'Ã–' => 'Ö', 'Ãœ' => 'Ü',
+        'â€“' => '–', 'â€”' => '—', 'â€ž' => '„', 'â€œ' => '“', 'â€˜' => '‚', 'â€™' => '’', 'â€¦' => '…'
+    ];
+    $s = strtr($s, $map);
+    // 4) Strip tags and collapse whitespace
+    $s = strip_tags($s);
+    $s = preg_replace('/\s+/u', ' ', $s);
+    $s = trim($s);
+    // 5) Final NFC
+    $s = sitc_nfc($s);
+    return $s;
+}
+
+// Backward-compat: existing code calls sitc_clean_text; delegate to sanitize
+function sitc_clean_text($val): string {
+    return sitc_text_sanitize($val);
 }
 
 // Build a canonical key for de-duplication: trim, collapse whitespace, lower-case, remove diacritics

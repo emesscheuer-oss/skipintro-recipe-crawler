@@ -1,3 +1,44 @@
+## [0.5.17] - 2025-09-04
+### Fixed
+- NBSP/Thin NBSP werden vor dem Parsen in Leerzeichen gewandelt; Stopwörter werden robust entfernt.
+- Line-first-Fallback im Renderer extrahiert führende Menge aus der vollständigen Rohzeile (½…, ca.…), wenn v3/v2 keine Menge liefern.
+- Unicode-Fraktionen in Rohzeilen werden gemappt; Anzeige immer DE-Format mit Komma (max. 2 Nachkommastellen), keine Rohstrings.
+- Einheiten-Schreibung konsolidiert (ml/g/kg/l klein; TL/EL groß; Stück korrekt), niemals „Ml“.
+### Files
+- includes/renderer.php
+- includes/parser.php
+- includes/refresh.php
+- skipintro-recipe-crawler.php
+- CHANGELOG.md
+- PROJECT_PLAN.md
+## [0.5.16] - 2025-09-04
+### Fixed
+- Zentrale Render-Pipeline erzwungen (sanitize ? pre-normalize ? parse ? format DE) in allen Renderpfaden; keine Rohstrings mehr im Frontend.
+- Dev-Diagnostik-Badge (nur Dev-Mode) zeigt Pipeline für die ersten 5 Zutatenzeilen (raw/sanitized/prenorm/parsed/display + source).
+- Refresh-Flow: Dev-Option ‚Force refresh‘ ignoriert Locks, parsed Felder werden überschrieben; Feldquellen gespeichert und genutzt.
+- Mojibake-Quelle entschärft: Sanitize-Reihenfolge auf Entities ? NFC ? Mojibake ? Whitespace umgestellt; „StÃ¼ck“ ? „Stück“ vor dem Parsen.
+- DE-Einheiten und „ca.“/Stopwörter konsolidiert; Unicode-Brüche am Zeilenanfang sicher erkannt und skaliert.
+### Files
+- includes/renderer.php
+- includes/parser.php (sanitize helpers)
+- includes/refresh.php
+- skipintro-recipe-crawler.php
+- CHANGELOG.md
+- PROJECT_PLAN.md
+## [0.5.15] - 2025-09-04
+### Fixed
+- Globale Pipeline fÃ¼r Zutaten-Normalisierung (DE) durchgÃ¤ngig erzwungen: Sanitize â†’ Pre-Normalize â†’ Parse â†’ Format (DE) â†’ Render; keine Rohstrings mehr in der Anzeige.
+- Unicode-BrÃ¼che am Zeilenanfang (Â½, â…“, Â¼, â…”, Â¾) robust erkannt und in skalierbare Dezimalzahlen Ã¼berfÃ¼hrt.
+- Text-Sanitisierung mit HTML-Entities, UTF-8/NFC und Mojibake-Fixes (z. B. â€žStÃƒÂ¼ckâ€œ â†’ â€žStÃ¼ckâ€œ).
+- StopwÃ¶rter â€žca.â€œ u. a. (ca, circa, etwa, ungefÃ¤hr, about, approx., (ca.), (ca)) entfernt.
+- Einheitenschreibung in der Anzeige vereinheitlicht (ml, g, kg, l klein; TL/EL groÃŸ; StÃ¼ck korrekt mit Umlaut).
+### Files
+- includes/parser.php
+- includes/renderer.php
+- skipintro-recipe-crawler.php
+- CHANGELOG.md
+- PROJECT_PLAN.md
+
 ## [0.5.14] - 2025-09-04
 ### Fixed
 - Renderer: Syntaxfehler um Zeile ~365 behoben (String-Verkettung / Artefakt entfernt).
@@ -156,3 +197,5 @@
 ## Format
 - [Version] ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Datum
 - BlÃƒÆ’Ã‚Â¶cke: Added, Changed, Fixed, Removed.
+
+

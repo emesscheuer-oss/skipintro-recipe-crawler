@@ -50,6 +50,8 @@ function sitc_render_recipe_tools_metabox(WP_Post $post) {
         if (function_exists('sitc_is_dev_mode') && sitc_is_dev_mode()) {
             $dry = add_query_arg('dry_run', '1', $url);
             echo '<p style="margin-top:6px;"><a href="' . esc_url($dry) . '" class="button">' . esc_html__('Trockenlauf (Diff, kein Schreiben)', 'sitc') . '</a></p>';
+            $force = add_query_arg('force', '1', $url);
+            echo '<p style="margin-top:6px;"><a href="' . esc_url($force) . '" class="button button-secondary">' . esc_html__('Force refresh (Dev)', 'sitc') . '</a></p>';
         }
     } else {
         echo '<p style="margin:0;">' . esc_html__('Keine bekannte Quelle gespeichert.', 'sitc') . '</p>';
@@ -81,6 +83,7 @@ function sitc_handle_refresh_recipe() {
     }
 
     $dry_run = !empty($_REQUEST['dry_run']);
+    $force = !empty($_REQUEST['force']) && function_exists('sitc_is_dev_mode') && sitc_is_dev_mode();
 
     // Determine source URL: schema.url -> canonical/og:url -> _sitc_source_url
     $source_url = sitc_determine_source_url($post_id);
@@ -107,10 +110,11 @@ function sitc_handle_refresh_recipe() {
         exit;
     }
 
-    // Build update plan respecting locks
+    // Build update plan respecting locks (dev force can override)
     $locks = get_post_meta($post_id, '_sitc_lock', true);
     if (!is_array($locks)) $locks = [];
     $locks = array_map('strval', $locks);
+    if ($force) { $locks = []; }
 
     $changes = [];
     $meta_updates = [];
