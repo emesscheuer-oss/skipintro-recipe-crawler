@@ -1,14 +1,14 @@
-<?php
+﻿<?php
 /*
 Plugin Name: Skip Intro Recipe Crawler
-Description: Importiert Rezepte von externen URLs (extrahiert JSON-LD Recipe-Daten) und speichert sie als Beiträge mit Kategorien & skalierbaren Zutaten.
-Version: 0.5.11
+Description: Importiert Rezepte von externen URLs (extrahiert JSON-LD Recipe-Daten) und speichert sie als BeitrÃ¤ge mit Kategorien & skalierbaren Zutaten.
+Version:  0.5.14
 Author: SKIP INTRO OHG
 */
 
 if (!defined('ABSPATH')) exit;
 
-// Admin-Menü: Unter "Beiträge" → "Importieren"
+// Admin-MenÃ¼: Unter "BeitrÃ¤ge" â†’ "Importieren"
 add_action('admin_menu', function() {
     add_submenu_page(
         'edit.php',

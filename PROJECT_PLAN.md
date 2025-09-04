@@ -2,8 +2,9 @@
 
 ## 0 - Basis (0.5.x)
 0.1 Parser/Renderer stabilisieren - o. (umgesetzt in 0.5.11)
-    - C LF-Zeilenenden fix umgesetzt in 0.5.15
-    - B Ã¢â‚¬â€œ Quarantaene & UTF-8 erledigt in 0.5.12
+    - Renderer-Syntaxfix umgesetzt in 0.5.14
+    - C LF-Zeilenenden fix umgesetzt in 0.5.14
+    - B ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Quarantaene & UTF-8 erledigt in 0.5.12
     - C Mojibake-Cleanup Renderer umgesetzt in 0.5.14
 0.2 Skalierung fixen - ~?
 0.3 Checkboxen fixen - ~?
@@ -21,7 +22,7 @@
 2.1 JSON-LD: HowToSection/Steps sauber uebernehmen - ~?
 2.2 Zutaten-Gruppen: Abschnitts-Header erkennen (TOPPING, MARINADE, ...) - ~?
 2.3 Mengen/Brueche: 1/2, 1 1/2 + Dezimal (Komma/Punkt) korrekt skalieren - ? (umgesetzt in 0.5.5)
-    - D umgesetzt in 0.5.13
+    - D umgesetzt in 0.5.14
 2.4 Einheiten-Ausgabe: Locale getreu (EL/TL, g, ml ...), keine Auto-Uebersetzung - ? (umgesetzt in 0.5.5)
 2.5 Renderer: Steps immer OL/LI, Sections als Ueberschrift + eigene OL - ~?
 2.6 Bild-Fallback: JSON-LD -> og:image -> Standardbild - ~?
@@ -29,7 +30,7 @@
     - Merge-Prioritaet: JSON-LD > Microdata > DOM; DOM nur als Fallback fuer fehlende Felder.
     - De-Dupe: case-/diakritika-/whitespace-insensitiv; Zeilenreihenfolge stabil (erstes Vorkommen bleibt).
 2.8 Bereichs- & freie Mengen: "2-3", "Saft einer halben Zitrone" skalierbar - ~?
-    - D umgesetzt in 0.5.13
+    - D umgesetzt in 0.5.14
 2.9 Naehrwerte auslesen und mitschreiben, falls nicht vorhanden aus den Zutaten heruntergerechnet auf eine Portion/Person - ~?
 
 ## 3 - Import & Admin
