@@ -146,9 +146,8 @@
 
   // Checkbox → Durchstreichen via CSS-Klasse
   $(document).on('change', '.sitc-chk', function(){
-    var $line = $(this).closest('.sitc-ingredient').find('.sitc-line');
-    if (this.checked) $line.addClass('checked');
-    else $line.removeClass('checked');
+    var $li = $(this).closest('.sitc-ingredient');
+    $li.toggleClass('checked', this.checked);
   });
 
   $(document).on('click', '.sitc-btn-grocery', function(){
@@ -167,5 +166,9 @@
   // initial
   $(function(){
     $('.sitc-recipe').each(function(){ recalc($(this)); });
+    $('.sitc-ingredient .sitc-chk').each(function(){
+      var $li = $(this).closest('.sitc-ingredient');
+      $li.toggleClass('checked', this.checked);
+    });
   });
 })(jQuery);

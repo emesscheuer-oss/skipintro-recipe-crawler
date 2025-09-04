@@ -5,6 +5,14 @@ if (!defined('ABSPATH')) exit;
  * Lädt CSS & JS für das Frontend (Rezepte).
  */
 function sitc_enqueue_frontend_assets() {
+    // Nur auf einzelnen Beitragsseiten mit Rezept-Daten laden
+    if (!is_singular('post')) return;
+    $post_id = get_queried_object_id();
+    if (!$post_id) return;
+    $has_ing   = get_post_meta($post_id, '_sitc_ingredients_struct', true);
+    $has_instr = get_post_meta($post_id, '_sitc_instructions', true);
+    if (empty($has_ing) && empty($has_instr)) return;
+
     // Basis-Plugin-URL
     $base = plugin_dir_url(__DIR__);
 

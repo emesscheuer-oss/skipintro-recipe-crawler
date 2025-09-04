@@ -1,5 +1,28 @@
 # Changelog - SkipIntro Recipe Crawler
 
+## [0.5.10] - 2025-09-03
+### Fixed
+- Zutaten-Gruppen: Verhindert Fehlklassifikation von echten Zutatenzeilen als Zwischenüberschrift (z. B. „½ TK Enten …“ wurde durch das Wort „Ente“ irrtümlich als Header erkannt). Heuristik prüft jetzt zunächst auf Mengen/Einheiten und wertet solche Zeilen nicht als Header.
+### Files
+- includes/renderer.php
+
+## [0.5.9] - 2025-09-02
+### Fixed
+- Vor-Normalisierung für Mengen: Entfernt generische Zusätze wie "ca.", "circa", "etwa", "ungef.", "about", "approx.", "approximately" am Zeilenanfang bzw. direkt vor der Zahl sowie unmittelbar nach der Menge (z. B. "60 (ca.) ml").
+- Vereinheitlicht Whitespaces um "/" und Bereichsseparatoren (en/em dash, "-") vor dem Mengen-Parsing. Dadurch werden Zeilen wie "ca. 60 ml Öl (ca.)" korrekt als skalierbare Basis erkannt.
+### Files
+- includes/parser.php
+- skipintro-recipe-crawler.php
+- CHANGELOG.md
+- PROJECT_PLAN.md
+
+## [0.5.8] - 2025-09-02
+### Fixed
+- Generische De-Dupe-Logik für Zutaten nach dem Merge (JSON-LD > Microdata > DOM). Normalisiert Menge (inkl. Bereiche), Einheit (kanonisch) und Zutatentext (Whitespace/Case/Diakritika/Stopwörter/Lemma) zu einem robusten Schlüssel; doppelte Einträge werden zusammengeführt, Notizen vereinigt.
+### Files
+- includes/parser.php
+- skipintro-recipe-crawler.php
+
 ## [0.5.7] - 2025-09-02
 ### Fixed
 - Mengen-Parser robust gegen Unicode- und ASCII-Brüche (½, ⅓, ¼, ⅔, ¾ sowie 1/2, 1 1/2, 1 /2), Dezimalzahlen mit Komma/Punkt und Bereiche (2–3 / 2-3). Beide Bereichsenden werden korrekt skaliert und in DE-Format angezeigt.

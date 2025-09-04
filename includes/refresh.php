@@ -26,6 +26,13 @@ function sitc_render_recipe_tools_metabox(WP_Post $post) {
     $schema_json = get_post_meta($post->ID, '_sitc_schema_recipe_json', true);
     $has_recipe_meta = !empty($source_url) || !empty($schema_json);
     $last_refreshed = get_post_meta($post->ID, '_sitc_last_refreshed', true);
+    if (!empty($last_refreshed)) {
+        // Private Use: display UTC + 2 hours (static CEST-like offset)
+        $tsUtc = strtotime($last_refreshed . ' UTC');
+        if ($tsUtc) {
+            $last_refreshed = gmdate('Y-m-d H:i:s', $tsUtc + 2 * 3600);
+        }
+    }
     $parser_ver = get_post_meta($post->ID, '_sitc_parser_version', true);
 
     echo '<div class="sitc-recipe-tools">';
@@ -387,6 +394,13 @@ function sitc_append_refresh_log(int $post_id, array $entry, bool $dry_run=false
 // Admin notices helper via transient to avoid long query args
 add_action('admin_notices', function() {
     if (!is_user_logged_in()) return;
+    // Skip classic admin_notices on Block Editor screens; use Gutenberg notice instead
+    if (function_exists('get_current_screen')) {
+        $screen = get_current_screen();
+        if ($screen && method_exists($screen, 'is_block_editor') && $screen->is_block_editor()) {
+            return;
+        }
+    }
     $key = 'sitc_refresh_notice_' . get_current_user_id();
     $note = get_transient($key);
     if (!$note) return;
@@ -395,6 +409,39 @@ add_action('admin_notices', function() {
     echo '<div class="notice notice-' . esc_attr($type) . '"><p>' . wp_kses_post($note['message']) . '</p>';
     if (!empty($note['details'])) echo '<div>' . wp_kses_post($note['details']) . '</div>';
     echo '</div>';
+});
+
+// Show notice inside the Block Editor (Gutenberg) as in-editor notice
+add_action('admin_footer-post.php', function() {
+    if (!is_user_logged_in()) return;
+    if (!function_exists('get_current_screen')) return;
+    $screen = get_current_screen();
+    // Only run on block editor screens to avoid duplicate messages in Classic Editor
+    if (!$screen || (method_exists($screen, 'is_block_editor') && !$screen->is_block_editor())) return;
+
+    $key = 'sitc_refresh_notice_' . get_current_user_id();
+    $note = get_transient($key);
+    if (!$note) return;
+    delete_transient($key);
+
+    $type = in_array($note['type'], ['success','error','warning','info'], true) ? $note['type'] : 'info';
+    $message = wp_strip_all_tags((string)($note['message'] ?? ''));
+    $details = wp_strip_all_tags((string)($note['details'] ?? ''));
+    $content = trim($message . ($details !== '' ? ' ' . $details : ''));
+
+    // Print a small script to push a notice via Gutenberg's data store
+    echo '<script>(function(w){
+        if(!w || !w.wp || !w.wp.data || !w.wp.data.dispatch){return;}
+        try {
+            var kind = ' . json_encode($type) . ';
+            var text = ' . json_encode($content) . ';
+            var status = (kind===' . json_encode('error') . ') ? ' . json_encode('error') . ' : (kind===' . json_encode('warning') . ' ? ' . json_encode('warning') . ' : ' . json_encode('success') . ');
+            // Delay a tick to ensure editor is ready
+            setTimeout(function(){
+                w.wp.data.dispatch("core/notices").createNotice(status, text, {isDismissible:true});
+            }, 50);
+        } catch(e){}
+    })(window);</script>';
 });
 
 function sitc_store_admin_notice(string $type, string $message, string $details_html=''): void {

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (!defined('ABSPATH')) exit;
 
 /**
@@ -40,12 +40,7 @@ function sitc_unit_to_de($unit) {
         'oz' => 'oz', 'ounce' => 'oz', 'ounces' => 'oz',
         'lb' => 'lb', 'pound' => 'lb', 'pounds' => 'lb',
     ];
-    $res = $map[$u] ?? $unit;
-    // Fix potential mojibake for "Stu00fcck" seen in some environments
-    if ($res === 'StÇ¬ck' || preg_match('/^st.?ck$/i', (string)$res)) {
-        $res = html_entity_decode('St&uuml;ck', ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    }
-    return $res;
+    return $map[$u] ?? $unit;
 }
 
 // Helper: Uppercase first letter (DE safe)
@@ -65,19 +60,20 @@ function sitc_ucfirst_de(string $s): string {
 // capitalize likely nouns while keeping common adjectives/conjunctions lowercase.
 function sitc_cased_de_ingredient(string $s): string {
     if ($s === '') return $s;
-    // If not likely German, keep original casing
-    $hasUmlaut = preg_match('/[\x{00E4}\x{00F6}\x{00FC}\x{00DF}]/u', $s) === 1; // äöüß
-    $hasDeWords = preg_match('/\b(und|oder|mit|ohne|für|fuer|zum|zur|der|die|das|den|dem|des)\b/u', mb_strtolower($s,'UTF-8')) === 1;
-    if (!$hasUmlaut && !$hasDeWords) { return $s; }
+    // Do not early-return on internal uppercase: we still want to
+    // capitalize the first lowercase ingredient word like "zitrone (Saft ...)"
 
     $lowerKeep = [
-        'und','oder','mit','ohne','in','im','am','vom','von','zum','zur','zu','auf','an','aus','für','fuer','bei','als','der','die','das','den','dem','des','ein','eine','einer','einem','eines'
+        // conjunctions / prepositions / articles common in ingredients
+        'und','oder','mit','ohne','in','im','am','vom','von','zum','zur','zu','auf','an','aus','fÃ¼r','fuer','bei','als','der','die','das','den','dem','des','ein','eine','einer','einem','eines'
     ];
     $adjBase = [
-        'gemahlen','gehackt','gerieben','gepresst','gequetscht','geschält','geschaelt','getrocknet','frisch','weich','hart','grob','fein','klein','groß','gross','mittelgroß','mittelgross','kalt','warm','heiß','heiss','lauwarm','zart','reif','ungesalzen','gesalzen','gewürfelt','gewuerfelt','in','halbiert','geviertelt','entkernt','ohne','mit'
+        // common adjectives/descriptors in ingredient lines (base lemmas)
+        'gemahlen','gehackt','gerieben','gepresst','gequetscht','geschÃ¤lt','geschaelt','getrocknet','frisch','weich','hart','grob','fein','klein','groÃŸ','gross','mittelgroÃŸ','mittelgross','kalt','warm','heiÃŸ','heiss','lauwarm','zart','reif','ungesalzen','gesalzen','gewÃ¼rfelt','gewuerfelt','in','halbiert','geviertelt','entkernt','ohne','mit'
     ];
     $isAdj = function(string $w) use ($adjBase): bool {
         $l = mb_strtolower($w, 'UTF-8');
+        // strip common adjective inflections
         foreach (['e','en','em','er','es','n','s'] as $suf) {
             if (mb_strlen($l,'UTF-8') > mb_strlen($suf,'UTF-8') && mb_substr($l, -mb_strlen($suf,'UTF-8'), null, 'UTF-8') === $suf) {
                 $stem = mb_substr($l, 0, -mb_strlen($suf,'UTF-8'), 'UTF-8');
@@ -90,25 +86,38 @@ function sitc_cased_de_ingredient(string $s): string {
     $tokens = preg_split('/(\s+)/u', $s, -1, PREG_SPLIT_DELIM_CAPTURE);
     $out = [];
     foreach ($tokens as $tok) {
+        // preserve whitespace as-is
         if (preg_match('/^\s+$/u', $tok)) { $out[] = $tok; continue; }
+        // hyphenated parts treated separately
         $parts = preg_split('/(-)/u', $tok, -1, PREG_SPLIT_DELIM_CAPTURE);
         $newTok = '';
         foreach ($parts as $p) {
             if ($p === '-') { $newTok .= $p; continue; }
             $lc = mb_strtolower($p, 'UTF-8');
+            // keep known lowercase words and adjectives lowercase (preserve punctuation)
             if (in_array($lc, $lowerKeep, true) || $isAdj($p)) { $newTok .= $lc; continue; }
+
+            // If token contains any letters, and all its letters are lowercase,
+            // uppercase the first letter character (but keep parentheses/digits intact).
             if ($p !== '' && preg_match('/\p{L}/u', $p)) {
                 $lettersOnly = preg_replace('/[^\p{L}]+/u', '', $p);
                 if ($lettersOnly !== '' && $lettersOnly === mb_strtolower($lettersOnly, 'UTF-8')) {
-                    $done = false; $len = mb_strlen($p, 'UTF-8');
+                    $done = false;
+                    $len = mb_strlen($p, 'UTF-8');
                     for ($i=0; $i<$len; $i++) {
                         $ch = mb_substr($p, $i, 1, 'UTF-8');
-                        if (!$done && preg_match('/\p{Ll}/u', $ch)) { $newTok .= mb_strtoupper($ch, 'UTF-8'); $done = true; }
-                        else { $newTok .= $ch; }
+                        if (!$done && preg_match('/\p{Ll}/u', $ch)) {
+                            $newTok .= mb_strtoupper($ch, 'UTF-8');
+                            $done = true;
+                        } else {
+                            $newTok .= $ch;
+                        }
                     }
                     continue;
                 }
             }
+
+            // otherwise preserve as-is
             $newTok .= $p;
         }
         $out[] = $newTok;
@@ -119,10 +128,6 @@ function sitc_cased_de_ingredient(string $s): string {
 // Detect if a line looks like a section header according to heuristics
 function sitc_is_group_header(string $line): bool {
     $t = trim($line);
-    // Strip decorative noise (uXXXX sequences and common symbols)
-    $t = preg_replace('/(:?u[0-9a-fA-F]{4})+/', '', $t);
-    $t = preg_replace('/[■▪•★☆]+/u', '', $t);
-    $t = trim(preg_replace('/\s+/', ' ', $t));
     if ($t === '') return false;
     // Ends with colon
     if (preg_match('/:\s*$/u', $t)) return true;
@@ -133,7 +138,8 @@ function sitc_is_group_header(string $line): bool {
     }
     // Keyword heuristics (DE/EN), case-insensitive
     $keywords = [
-        'BEILAGE','SAUCE','GARNITUR','TOPPING','MARINADE','DRESSING','FUELLUNG','TEIG','SPICE MIX'
+        'ENTE','BEILAGE','SAUCE','GARNITUR','TOPPING','FÃœR DIE BIRRIA','FUER DIE BIRRIA','FÃœR DIE TACOS','FUER DIE TACOS',
+        'MARINADE','DRESSING','SPICE MIX','FÃœLLUNG','FUELLUNG','TEIG'
     ];
     $u = mb_strtoupper($t, 'UTF-8');
     foreach ($keywords as $kw) {
@@ -187,11 +193,6 @@ function sitc_build_ingredient_groups_for_render(int $post_id): array {
         // Guard: lines that look like real ingredients (qty/unit) should not be treated as headers
         $looksLikeIngredient = (
             preg_match('/^\s*(?:\d|\p{N}|[Â¼Â½Â¾â…“â…”â…›â…œâ…â…ž])/u', $t) ||
-            preg_match('/\b(g|kg|ml|l|tl|el|tsp|tbsp|cup|prise|pinch|dose|bund|oz|lb|can|bunch)\b/i', $t)
-        );
-        // Recompute with Unicode-safe pattern (avoid source-encoding issues)
-        $looksLikeIngredient = (
-            preg_match('/^\s*(?:\d|\p{N}|[\x{00BC}\x{00BD}\x{00BE}\x{2153}\x{2154}\x{215B}\x{215C}\x{215D}\x{215E}])/u', $t) ||
             preg_match('/\b(g|kg|ml|l|tl|el|tsp|tbsp|cup|prise|pinch|dose|bund|oz|lb|can|bunch)\b/i', $t)
         );
         if (!$looksLikeIngredient && sitc_is_group_header($t)) {
@@ -282,17 +283,10 @@ function sitc_prepare_grouped_items(array $groups): array {
 
 // Helper: Unicode-BrÃ¼che â†’ ASCII (Vor-Normalisierung fÃ¼r Mengen)
 function sitc_replace_unicode_fractions(string $s): string {
-    // Map unicode fraction glyphs to ASCII (robust to encoding issues)
     $map = [
-        "\xE2\x85\x9B" => '1/8', // ⅛
-        "\xE2\x85\x9C" => '3/8', // ⅜
-        "\xE2\x85\x9D" => '5/8', // ⅝
-        "\xE2\x85\x9E" => '7/8', // ⅞
-        "\xC2\xBC"     => '1/4', // ¼
-        "\xC2\xBD"     => '1/2', // ½
-        "\xC2\xBE"     => '3/4', // ¾
-        "\xE2\x85\x93" => '1/3', // ⅓
-        "\xE2\x85\x94" => '2/3', // ⅔
+        'Â½' => '1/2', 'Â¼' => '1/4', 'Â¾' => '3/4',
+        'â…“' => '1/3', 'â…”' => '2/3',
+        'â…›' => '1/8', 'â…œ' => '3/8', 'â…' => '5/8', 'â…ž' => '7/8',
     ];
     return strtr($s, $map);
 }
@@ -341,15 +335,15 @@ function sitc_format_qty_display($val): string {
     return rtrim(rtrim($s, '0'), ',');
 }
 
-// Mengen-Parsing: 1/2, 1 1/2, ½, 1,5 => float
+// Mengen-Parsing: 1/2, 1 1/2, Â½, 1,5 => float
 function sitc_coerce_qty_float($qty) {
     if ($qty === null) return null;
     $s = trim((string)$qty);
     if ($s === '') return null;
-    $s = sitc_replace_unicode_fractions($s);
+    $s = strtr($s, ['Â½'=>'1/2','Â¼'=>'1/4','Â¾'=>'3/4','â…“'=>'1/3','â…”'=>'2/3','â…›'=>'1/8','â…œ'=>'3/8','â…'=>'5/8','â…ž'=>'7/8']);
     if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $s, $m)) { return (float)$m[1] + ((float)$m[2]/max(1,(float)$m[3])); }
     if (preg_match('/^(\d+)\/(\d+)$/', $s, $m)) { return ((float)$m[1])/max(1,(float)$m[2]); }
-    if (preg_match('/^(\d+(?:[\.,]\d+)?)\s*[-–—]\s*\d+(?:[\.,]\d+)?$/u', $s, $m)) { return (float)str_replace(',', '.', $m[1]); }
+    if (preg_match('/^(\d+(?:[\.,]\d+)?)\s*[-â€“]\s*\d+(?:[\.,]\d+)?$/u', $s, $m)) { return (float)str_replace(',', '.', $m[1]); }
     if (preg_match('/^\d+(?:[\.,]\d+)?$/', $s)) { return (float)str_replace(',', '.', $s); }
     return null;
 }
@@ -402,14 +396,16 @@ function sitc_render_recipe_shortcode($post_id = 0) {
     }
 
     if (empty($ingredients) && empty($instructions)) return '';
-    // Assets werden konditional in includes/assets.php geladen
+
+    wp_enqueue_style('sitc-recipe');
+    wp_enqueue_script('sitc-recipe');
 
     ob_start(); ?>
     <div class="sitc-recipe" data-post="<?php echo (int)$post_id; ?>">
         <div class="sitc-controls">
             <span class="sitc-yield-label">Personenanzahl:</span>
             <div class="sitc-servings-control">
-                <button type="button" class="sitc-btn sitc-btn-minus">-</button>
+                <button type="button" class="sitc-btn sitc-btn-minus">âˆ’</button>
                 <span class="sitc-servings-display" data-base-servings="<?php echo esc_attr($yield_num); ?>">
                     <?php echo esc_html($yield_num); ?>
                 </span>
@@ -426,25 +422,6 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                 <button type="button" class="sitc-btn sitc-btn-trash" data-post="<?php echo $post_id; ?>" data-token="<?php echo esc_attr($trash_token); ?>" title="Rezept lÃ¶schen"><span class="material-symbols-outlined">delete</span></button>
                 <button type="button" class="sitc-btn sitc-btn-photo" title="Foto hinzufÃ¼gen"><span class="material-symbols-outlined">add_a_photo</span></button>
             </div>
-        </div>
-        <?php
-            // Debug version string to detect active builds in frontend
-            // Auto-derive versions from file modification times; show DE-style (+2h)
-            $parser_ts   = @filemtime(__DIR__ . '/parser.php');
-            $renderer_ts = @filemtime(__FILE__);
-
-            $parser_ver = '-';
-            if ($parser_ts) {
-                $parser_ver = gmdate('Y-m-d.H:i:s', $parser_ts + 2 * 3600);
-            }
-
-            $renderer_ver = '-';
-            if ($renderer_ts) {
-                $renderer_ver = gmdate('Y-m-d.H:i:s', $renderer_ts + 2 * 3600);
-            }
-        ?>
-        <div class="sitc-version" style="margin:.5rem 0;color:#888;font-size:.9rem;">
-            Parser: <?php echo esc_html($parser_ver); ?> | Renderer: <?php echo esc_html($renderer_ver); ?>
         </div>
         <?php
             // Group-aware rendering: prefer ingredientGroups if present, else heuristic from recipeIngredient
@@ -466,7 +443,7 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                     $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
                     $qInfo   = sitc_parse_qty_or_range($qtyRaw);
                     if ($qInfo['isRange']) {
-                        $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
+                        $dispQty = sitc_format_qty_display($qInfo['low']) . 'â€“' . sitc_format_qty_display($qInfo['high']);
                     } elseif ($qInfo['low'] !== null) {
                         $dispQty = sitc_format_qty_display($qInfo['low']);
                     } else {
@@ -487,7 +464,6 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                         <label for="<?php echo esc_attr($id_for); ?>">
                             <input type="checkbox" id="<?php echo esc_attr($id_for); ?>" class="sitc-chk">
                             <span class="sitc-line">
-                                
                                 <span class="sitc-qty"><?php echo esc_html($dispQty); ?></span>
                                 <?php if ($unitDe !== ''): ?><span class="sitc-unit"> <?php echo esc_html($unitDe); ?></span><?php endif; ?>
                                 <span class="sitc-name"> <?php echo esc_html($nameDisp); ?></span>
@@ -508,7 +484,7 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                         $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
                         $qInfo   = sitc_parse_qty_or_range($qtyRaw);
                         if ($qInfo['isRange']) {
-                            $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
+                            $dispQty = sitc_format_qty_display($qInfo['low']) . 'â€“' . sitc_format_qty_display($qInfo['high']);
                         } elseif ($qInfo['low'] !== null) {
                             $dispQty = sitc_format_qty_display($qInfo['low']);
                         } else {
@@ -524,22 +500,22 @@ function sitc_render_recipe_shortcode($post_id = 0) {
         <?php elseif (!empty($ingredients)) : ?>
             <h3>Zutaten</h3>
             <ul class="sitc-ingredients" data-base-servings="<?php echo esc_attr($yield_num); ?>">
-                <?php foreach ($ingredients as $ing): ?>
-                    <?php
-                        $qtyRaw   = $ing['qty'] ?? '';
-                        $unitRaw  = $ing['unit'] ?? '';
-                        $name     = $ing['name'] ?? '';
-                        $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
-                        $qInfo    = sitc_parse_qty_or_range($qtyRaw);
-                        if ($qInfo['isRange']) {
-                            $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
-                        } elseif ($qInfo['low'] !== null) {
-                            $dispQty = sitc_format_qty_display($qInfo['low']);
-                        } else {
-                            $dispQty = trim((string)$qtyRaw);
-                        }
-                        $unitDe  = sitc_unit_to_de($unitRaw);
-                        $id_for  = 'sitc_chk_' . $post_id . '_' . md5($qtyRaw.'|'.$unitRaw.'|'.$name);
+                <?php foreach ($ingredients as $ing):
+                    $qtyRaw  = $ing['qty'] ?? '';
+                    $unitRaw = $ing['unit'] ?? '';
+                    $name    = $ing['name'] ?? '';
+                    $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
+                    $qInfo   = sitc_parse_qty_or_range($qtyRaw);
+                    if ($qInfo['isRange']) {
+                        $dispQty = sitc_format_qty_display($qInfo['low']) . 'â€“' . sitc_format_qty_display($qInfo['high']);
+                    } elseif ($qInfo['low'] !== null) {
+                        $dispQty = sitc_format_qty_display($qInfo['low']);
+                    } else {
+                        $dispQty = trim((string)$qtyRaw);
+                    }
+                    $unitDe  = sitc_unit_to_de($unitRaw);
+
+                    $id_for = 'sitc_chk_' . $post_id . '_' . md5($qtyRaw.'|'.$unitRaw.'|'.$name);
                     ?>
                     <li class="sitc-ingredient"
                         <?php if ($qInfo['isRange']): ?>
@@ -571,7 +547,7 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                         $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
                         $qInfo   = sitc_parse_qty_or_range($qtyRaw);
                         if ($qInfo['isRange']) {
-                            $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
+                            $dispQty = sitc_format_qty_display($qInfo['low']) . 'â€“' . sitc_format_qty_display($qInfo['high']);
                         } elseif ($qInfo['low'] !== null) {
                             $dispQty = sitc_format_qty_display($qInfo['low']);
                         } else {
@@ -628,10 +604,3 @@ add_filter('the_content', function($content){
 
     return $content . "\n\n" . $block;
 }, 9999);
-
-
-
-
-
-
-

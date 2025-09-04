@@ -14,13 +14,14 @@
 1.5 Debug-Panel (nur Dev) – ~?  
 
 ## 2 – Parser-Verbesserungen
+2.10 Vor-Normalisierung/Stopwörter: "ca./circa/ungef./about/approx." vor/nach Mengen entfernen – o. (umgesetzt in 0.5.9)  
 2.1 JSON-LD: HowToSection/Steps sauber übernehmen – ~?  
 2.2 Zutaten-Gruppen: Abschnitts-Header erkennen (TOPPING, MARINADE, …) – ~?  
 2.3 Mengen/Brüche: ½, 1/2, 1 1/2 + Dezimal (Komma/Punkt) korrekt skalieren — ✅ (umgesetzt in 0.5.5)  
 2.4 Einheiten-Ausgabe: Locale getreu (EL/TL, g, ml …), keine Auto-Übersetzung — ✅ (umgesetzt in 0.5.5)  
 2.5 Renderer: Steps immer OL/LI, Sections als Überschrift + eigene OL – ~?  
 2.6 Bild-Fallback: JSON-LD → og:image → Standardbild – ~?  
-2.7 Merge/De-Dupe: JSON-LD + DOM zusammenführen, Duplikate vermeiden — ✅ (umgesetzt in 0.5.6)  
+2.7 Merge/De-Dupe: JSON-LD + DOM zusammenführen, Duplikate vermeiden — ✅ (umgesetzt in 0.5.8)  
     - Merge-Priorität: JSON-LD > Microdata > DOM; DOM nur als Fallback für fehlende Felder.
     - De-Dupe: case-/diakritika-/whitespace-insensitiv; Zeilenreihenfolge stabil (erstes Vorkommen bleibt).
 2.8 Bereichs- & freie Mengen: „2–3“, „Saft einer halben Zitrone“ skalierbar – ~?  

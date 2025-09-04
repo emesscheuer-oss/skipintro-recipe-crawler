@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (!defined('ABSPATH')) exit;
 
 /**
@@ -1040,13 +1040,7 @@ function sitc_parse_ingredient_line_v3(string $raw): array {
         $a = $toFloat($m[1]); $b=$toFloat($m[2]);
         if ($a !== null && $b !== null) {
             $qty = str_replace(',', '.', (string)$a) . '-' . str_replace(',', '.', (string)$b);
-            $u = mb_strtolower(trim($m[3] ?? ''), 'UTF-8');
-            if ($u !== '') {
-                $unit = $aliases[$u] ?? $u;
-                if (!in_array($unit, ['tsp','tbsp','cup','pinch','piece','can','bunch','g','kg','ml','l','oz','lb'], true)) {
-                    $unit = null;
-                }
-            }
+            $u = mb_strtolower(trim($m[3] ?? ''), 'UTF-8'); if ($u !== '') $unit = $aliases[$u] ?? $u;
             $rest = trim($m[4] ?? '');
             if (preg_match('/^(.*)\(([^\)]+)\)\s*$/', $rest, $n)) { $item = trim($n[1]); $note = trim($n[2]); }
             else $item = $rest;
@@ -1059,15 +1053,7 @@ function sitc_parse_ingredient_line_v3(string $raw): array {
         $qv = $toFloat(trim($m[1]));
         if ($qv !== null) {
             $qty = str_replace(',', '.', (string)$qv);
-            $u = mb_strtolower(trim($m[2] ?? ''), 'UTF-8');
-            if ($u !== '') {
-                $unit = $aliases[$u] ?? $u;
-                if (!in_array($unit, ['tsp','tbsp','cup','pinch','piece','can','bunch','g','kg','ml','l','oz','lb'], true)) {
-                    $rest = trim($m[3] ?? '');
-                    $item = trim(($m[2] ?? '') . ' ' . $rest);
-                    return ['qty'=>$qty,'unit'=>null,'item'=>$item,'note'=>$note,'raw'=>$orig];
-                }
-            }
+            $u = mb_strtolower(trim($m[2] ?? ''), 'UTF-8'); if ($u !== '') $unit = $aliases[$u] ?? $u;
             $rest = trim($m[3] ?? '');
             if (preg_match('/^(.*)\(([^\)]+)\)\s*$/', $rest, $n)) { $item = trim($n[1]); $note = trim($n[2]); }
             else $item = $rest;
@@ -1087,5 +1073,3 @@ function sitc_parse_ingredient_line_v3(string $raw): array {
     return ['qty'=>null,'unit'=>null,'item'=>$orig,'note'=>null,'raw'=>$orig,'ambiguous'=>true];
 }
 }
-
-
