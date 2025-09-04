@@ -5,13 +5,23 @@ function sitc_render_importer_page() {
     ?>
     <div class="wrap">
         <h1>Rezept importieren</h1>
-        <div class="notice" style="padding:10px;background:#fff;border:1px solid #ccd0d4;margin:10px 0;">
+        <div class="notice" style="padding:10px;background:#fff;border:1px solid #ccd0d4;margin:10px 0;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:flex;align-items:center;gap:10px;">
                 <?php wp_nonce_field('sitc_dev_mode_toggle', 'sitc_dev_mode_nonce'); ?>
                 <input type="hidden" name="action" value="sitc_toggle_dev_mode">
                 <label style="margin:0;display:flex;align-items:center;gap:6px;">
                     <input type="checkbox" name="enable" value="1" <?php checked(function_exists('sitc_is_dev_mode') && sitc_is_dev_mode()); ?>>
                     <strong>Dev-Mode</strong> (steuert Dry-Run im Refresh)
+                </label>
+                <?php submit_button('Speichern', 'secondary', 'submit', false); ?>
+            </form>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:flex;align-items:center;gap:10px;">
+                <?php wp_nonce_field('sitc_safe_mode_toggle', 'sitc_safe_mode_nonce'); ?>
+                <input type="hidden" name="action" value="sitc_toggle_safe_mode">
+                <label style="margin:0;display:flex;align-items:center;gap:6px;">
+                    <input type="checkbox" name="enable" value="1" <?php checked(function_exists('sitc_is_safe_mode') && sitc_is_safe_mode()); ?>>
+                    <strong>Safe Mode</strong> (erzwingt Fallback-Renderer)
                 </label>
                 <?php submit_button('Speichern', 'secondary', 'submit', false); ?>
             </form>
@@ -40,8 +50,13 @@ function sitc_render_importer_page() {
         <?php
         if (!empty($_POST['sitc_recipe_url'])) {
             $url = esc_url_raw($_POST['sitc_recipe_url']);
-            // Use v2 parser that returns legacy + rich meta
-            $recipe = sitc_parse_recipe_from_url_v2($url);
+            // Use v2 parser that returns legacy + rich meta (guarded)
+            try {
+                $recipe = sitc_parse_recipe_from_url_v2($url);
+            } catch (Throwable $e) {
+                error_log('SITC Admin Import fatal: ' . $e->getMessage());
+                $recipe = null;
+            }
 
             if ($recipe) {
                 // Debug-Ausgabe

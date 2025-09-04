@@ -92,8 +92,15 @@ function sitc_handle_refresh_recipe() {
 
     do_action('sitc_before_refresh', $post_id, $source_url, ['dry_run'=>$dry_run]);
 
-    // Parse with v2
-    $result = sitc_parse_recipe_from_url_v2($source_url);
+    // Parse with v2 (guarded)
+    try {
+        $result = sitc_parse_recipe_from_url_v2($source_url);
+    } catch (Throwable $e) {
+        error_log('SITC Refresh fatal: ' . $e->getMessage());
+        sitc_store_admin_notice('error', __('Parser-Fehler beim Aktualisieren (abgefangen).', 'sitc'));
+        wp_safe_redirect(wp_get_referer() ?: admin_url('post.php?post='.$post_id.'&action=edit'));
+        exit;
+    }
     if (!$result || !is_array($result)) {
         sitc_store_admin_notice('error', __('Parser lieferte keine Daten.', 'sitc'));
         wp_safe_redirect(wp_get_referer() ?: admin_url('post.php?post='.$post_id.'&action=edit'));

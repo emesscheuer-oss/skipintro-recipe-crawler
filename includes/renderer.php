@@ -20,8 +20,8 @@ function sitc_normalize_scalar_number($value, $default = 2) {
     return $v > 0 ? $v : $default;
 }
 
-// Einheitenausgabe (DE) â€“ nur Anzeige-Mapping
-// Siehe DEV_NOTES.md: â€žEinheiten-Policy (DE)â€œ
+// Einheitenausgabe (DE) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ nur Anzeige-Mapping
+// Siehe DEV_NOTES.md: Einheiten-Policy (DE)
 function sitc_unit_to_de($unit) {
     $u = trim(mb_strtolower((string)$unit, 'UTF-8'));
     if ($u === '') return '';
@@ -29,7 +29,7 @@ function sitc_unit_to_de($unit) {
         'tsp' => 'TL', 'teaspoon' => 'TL', 'teaspoons' => 'TL', 'tl' => 'TL',
         'tbsp' => 'EL', 'tablespoon' => 'EL', 'tablespoons' => 'EL', 'el' => 'EL',
         'cup' => 'Tasse', 'cups' => 'Tasse', 'tasse' => 'Tasse',
-        'piece' => 'StÃ¼ck', 'pieces' => 'StÃ¼ck', 'stÃ¼ck' => 'StÃ¼ck', 'stueck' => 'StÃ¼ck',
+        'piece' => 'StÃ¼ck', 'pieces' => 'StÃ¼ck', 'stueck' => 'StÃ¼ck', 'stÃ¼ck' => 'StÃ¼ck',
         'pinch' => 'Prise', 'prisen' => 'Prise', 'prise' => 'Prise',
         'can' => 'Dose', 'dose' => 'Dose',
         'bunch' => 'Bund', 'bund' => 'Bund',
@@ -42,7 +42,7 @@ function sitc_unit_to_de($unit) {
     ];
     $res = $map[$u] ?? $unit;
     // Fix potential mojibake for "Stu00fcck" seen in some environments
-    if ($res === 'StÇ¬ck' || preg_match('/^st.?ck$/i', (string)$res)) {
+    if ($res === 'StÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ck' || preg_match('/^st.?ck$/i', (string)$res)) {
         $res = html_entity_decode('St&uuml;ck', ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
     return $res;
@@ -66,15 +66,15 @@ function sitc_ucfirst_de(string $s): string {
 function sitc_cased_de_ingredient(string $s): string {
     if ($s === '') return $s;
     // If not likely German, keep original casing
-    $hasUmlaut = preg_match('/[\x{00E4}\x{00F6}\x{00FC}\x{00DF}]/u', $s) === 1; // äöüß
-    $hasDeWords = preg_match('/\b(und|oder|mit|ohne|für|fuer|zum|zur|der|die|das|den|dem|des)\b/u', mb_strtolower($s,'UTF-8')) === 1;
+    $hasUmlaut = preg_match('/[\x{00E4}\x{00F6}\x{00FC}\x{00DF}]/u', $s) === 1; // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸
+    $hasDeWords = preg_match('/\b(und|oder|mit|ohne|fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r|fuer|zum|zur|der|die|das|den|dem|des)\b/u', mb_strtolower($s,'UTF-8')) === 1;
     if (!$hasUmlaut && !$hasDeWords) { return $s; }
 
     $lowerKeep = [
-        'und','oder','mit','ohne','in','im','am','vom','von','zum','zur','zu','auf','an','aus','für','fuer','bei','als','der','die','das','den','dem','des','ein','eine','einer','einem','eines'
+        'und','oder','mit','ohne','in','im','am','vom','von','zum','zur','zu','auf','an','aus','fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r','fuer','bei','als','der','die','das','den','dem','des','ein','eine','einer','einem','eines'
     ];
     $adjBase = [
-        'gemahlen','gehackt','gerieben','gepresst','gequetscht','geschält','geschaelt','getrocknet','frisch','weich','hart','grob','fein','klein','groß','gross','mittelgroß','mittelgross','kalt','warm','heiß','heiss','lauwarm','zart','reif','ungesalzen','gesalzen','gewürfelt','gewuerfelt','in','halbiert','geviertelt','entkernt','ohne','mit'
+        'gemahlen','gehackt','gerieben','gepresst','gequetscht','geschÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤lt','geschaelt','getrocknet','frisch','weich','hart','grob','fein','klein','groÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸','gross','mittelgroÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸','mittelgross','kalt','warm','heiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸','heiss','lauwarm','zart','reif','ungesalzen','gesalzen','gewÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼rfelt','gewuerfelt','in','halbiert','geviertelt','entkernt','ohne','mit'
     ];
     $isAdj = function(string $w) use ($adjBase): bool {
         $l = mb_strtolower($w, 'UTF-8');
@@ -121,7 +121,7 @@ function sitc_is_group_header(string $line): bool {
     $t = trim($line);
     // Strip decorative noise (uXXXX sequences and common symbols)
     $t = preg_replace('/(:?u[0-9a-fA-F]{4})+/', '', $t);
-    $t = preg_replace('/[■▪•★☆]+/u', '', $t);
+    $t = preg_replace('/[ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂªÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¹Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¹Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ]+/u', '', $t);
     $t = trim(preg_replace('/\s+/', ' ', $t));
     if ($t === '') return false;
     // Ends with colon
@@ -186,7 +186,7 @@ function sitc_build_ingredient_groups_for_render(int $post_id): array {
         if ($t === '') continue;
         // Guard: lines that look like real ingredients (qty/unit) should not be treated as headers
         $looksLikeIngredient = (
-            preg_match('/^\s*(?:\d|\p{N}|[Â¼Â½Â¾â…“â…”â…›â…œâ…â…ž])/u', $t) ||
+            preg_match('/^\s*(?:\d|\p{N}|[ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂºÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾])/u', $t) ||
             preg_match('/\b(g|kg|ml|l|tl|el|tsp|tbsp|cup|prise|pinch|dose|bund|oz|lb|can|bunch)\b/i', $t)
         );
         // Recompute with Unicode-safe pattern (avoid source-encoding issues)
@@ -280,19 +280,35 @@ function sitc_prepare_grouped_items(array $groups): array {
     return $out;
 }
 
-// Helper: Unicode-BrÃ¼che â†’ ASCII (Vor-Normalisierung fÃ¼r Mengen)
+// Helper: Unicode-BrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼che ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ ASCII (Vor-Normalisierung fÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r Mengen)
+// Mengen Vor-Normalisierung: StopwÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶rter entfernen, Dashes vereinheitlichen, SchrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤gstrich fixen
+function sitc_qty_pre_normalize(string $s): string {
+    $s = trim((string)$s);
+    if ($s === '') return $s;
+    // unify unicode dashes to ASCII hyphen
+    $s = str_replace(["\xE2\x80\x93","\xE2\x80\x94"], '-', $s);
+    // remove spaces around '/'
+    $s = preg_replace('/\s*\/\s*/', '/', $s);
+    // remove prefix stopwords like ca./circa/etwa/ungef./ungefaehr/about/approx.
+    $s = preg_replace('/^(?:ca\.?|circa|etwa|ungef\.?|ungefaehr|about|approx\.?)\s+/iu', '', $s);
+    // remove trailing parenthetical (ca.)/(approx.)
+    $s = preg_replace('/\(\s*(?:ca\.?|about|approx\.?|ungef\.?|ungefaehr)\s*\)/iu', '', $s);
+    // collapse extra spaces
+    $s = trim(preg_replace('/\s+/', ' ', $s));
+    return $s;
+}
 function sitc_replace_unicode_fractions(string $s): string {
     // Map unicode fraction glyphs to ASCII (robust to encoding issues)
     $map = [
-        "\xE2\x85\x9B" => '1/8', // ⅛
-        "\xE2\x85\x9C" => '3/8', // ⅜
-        "\xE2\x85\x9D" => '5/8', // ⅝
-        "\xE2\x85\x9E" => '7/8', // ⅞
-        "\xC2\xBC"     => '1/4', // ¼
-        "\xC2\xBD"     => '1/2', // ½
-        "\xC2\xBE"     => '3/4', // ¾
-        "\xE2\x85\x93" => '1/3', // ⅓
-        "\xE2\x85\x94" => '2/3', // ⅔
+        "\xE2\x85\x9B" => '1/8', // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Âº
+        "\xE2\x85\x9C" => '3/8', // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ
+        "\xE2\x85\x9D" => '5/8', // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â
+        "\xE2\x85\x9E" => '7/8', // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾
+        "\xC2\xBC"     => '1/4', // ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼
+        "\xC2\xBD"     => '1/2', // ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½
+        "\xC2\xBE"     => '3/4', // ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾
+        "\xE2\x85\x93" => '1/3', // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“
+        "\xE2\x85\x94" => '2/3', // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â
     ];
     return strtr($s, $map);
 }
@@ -302,10 +318,11 @@ function sitc_parse_qty_or_range($qty): array {
     $res = ['low'=>null, 'high'=>null, 'isRange'=>false];
     if ($qty === null) return $res;
     $s = trim((string)$qty);
+    $s = sitc_qty_pre_normalize($s);
     if ($s === '') return $res;
     $s = sitc_replace_unicode_fractions($s);
     $s = preg_replace('/\s*\/\s*/', '/', $s); // Spaces um "/" entfernen
-    $s = str_replace(['â€“','â€”',' to '], ['-','-','-'], $s); // Bereichsseparatoren
+    $s = str_replace(['ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ','ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â',' to '], ['-','-','-'], $s); // Bereichsseparatoren
 
     $toFloat = function(string $t){
         $t = trim($t);
@@ -341,15 +358,16 @@ function sitc_format_qty_display($val): string {
     return rtrim(rtrim($s, '0'), ',');
 }
 
-// Mengen-Parsing: 1/2, 1 1/2, ½, 1,5 => float
+// Mengen-Parsing: 1/2, 1 1/2, ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½, 1,5 => float
 function sitc_coerce_qty_float($qty) {
     if ($qty === null) return null;
     $s = trim((string)$qty);
+    $s = sitc_qty_pre_normalize($s);\n    $s = sitc_qty_pre_normalize($s);
     if ($s === '') return null;
     $s = sitc_replace_unicode_fractions($s);
     if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $s, $m)) { return (float)$m[1] + ((float)$m[2]/max(1,(float)$m[3])); }
     if (preg_match('/^(\d+)\/(\d+)$/', $s, $m)) { return ((float)$m[1])/max(1,(float)$m[2]); }
-    if (preg_match('/^(\d+(?:[\.,]\d+)?)\s*[-–—]\s*\d+(?:[\.,]\d+)?$/u', $s, $m)) { return (float)str_replace(',', '.', $m[1]); }
+    if (preg_match('/^(\d+(?:[\.,]\d+)?)\s*[-ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â]\s*\d+(?:[\.,]\d+)?$/u', $s, $m)) { return (float)str_replace(',', '.', $m[1]); }
     if (preg_match('/^\d+(?:[\.,]\d+)?$/', $s)) { return (float)str_replace(',', '.', $s); }
     return null;
 }
@@ -385,6 +403,16 @@ function sitc_render_recipe_shortcode($post_id = 0) {
 
     $source_url = get_post_meta($post_id, '_sitc_source_url', true);
 
+    // Safe Mode / Flags to decide on fallback rendering
+    $safeMode = function_exists('sitc_is_safe_mode') && sitc_is_safe_mode();
+    $flags_json = get_post_meta($post_id, '_sitc_flags_json', true);
+    $flags_arr = [];
+    if (is_string($flags_json) && $flags_json !== '') {
+        $tmp = json_decode($flags_json, true);
+        if (is_array($tmp)) { $flags_arr = $tmp; }
+    }
+    $use_fallback = $safeMode || (!empty($flags_arr['isPartial']) || !empty($flags_arr['lowConfidence']));
+
     $trash_token = get_post_meta($post_id, '_sitc_trash_token', true);
     if (!$trash_token) {
         $trash_token = wp_generate_password(20, false, false);
@@ -401,12 +429,12 @@ function sitc_render_recipe_shortcode($post_id = 0) {
         }
     }
 
-    if (empty($ingredients) && empty($instructions)) return '';
+    if (!$use_fallback && empty($ingredients) && empty($instructions)) return '';
     // Assets werden konditional in includes/assets.php geladen
 
     ob_start(); ?>
     <div class="sitc-recipe" data-post="<?php echo (int)$post_id; ?>">
-        <div class="sitc-controls">
+        <div class="sitc-controls"><?php if (!$use_fallback): ?>
             <span class="sitc-yield-label">Personenanzahl:</span>
             <div class="sitc-servings-control">
                 <button type="button" class="sitc-btn sitc-btn-minus">-</button>
@@ -423,10 +451,10 @@ function sitc_render_recipe_shortcode($post_id = 0) {
             <div class="sitc-actions">
                 <button type="button" class="sitc-btn sitc-btn-grocery" data-target="#sitc-list-<?php echo $post_id; ?>" aria-expanded="false" title="Einkaufsliste"><span class="material-symbols-outlined">shopping_cart</span></button>
                 <button type="button" class="sitc-btn sitc-btn-wake" title="Bildschirm anlassen"><span class="material-symbols-outlined">toggle_on</span></button>
-                <button type="button" class="sitc-btn sitc-btn-trash" data-post="<?php echo $post_id; ?>" data-token="<?php echo esc_attr($trash_token); ?>" title="Rezept lÃ¶schen"><span class="material-symbols-outlined">delete</span></button>
-                <button type="button" class="sitc-btn sitc-btn-photo" title="Foto hinzufÃ¼gen"><span class="material-symbols-outlined">add_a_photo</span></button>
+                <button type="button" class="sitc-btn sitc-btn-trash" data-post="<?php echo $post_id; ?>" data-token="<?php echo esc_attr($trash_token); ?>" title="Rezept lÃƒÂ¶schen"><span class="material-symbols-outlined">delete</span></button>
+                <button type="button" class="sitc-btn sitc-btn-photo" title="Foto hinzufÃƒÂ¼gen"><span class="material-symbols-outlined">add_a_photo</span></button>
             </div>
-        </div>
+        </div><?php endif; ?>
         <?php
             // Debug version string to detect active builds in frontend
             // Auto-derive versions from file modification times; show DE-style (+2h)
@@ -448,13 +476,14 @@ function sitc_render_recipe_shortcode($post_id = 0) {
         </div>
         <?php
             // Group-aware rendering: prefer ingredientGroups if present, else heuristic from recipeIngredient
-            $sourceGroups = sitc_build_ingredient_groups_for_render($post_id);
+            $sourceGroups = $use_fallback ? [] : sitc_build_ingredient_groups_for_render($post_id);
             $groupsForRender = [];
             if (!empty($sourceGroups)) {
-                $groupsForRender = sitc_prepare_grouped_items($sourceGroups);
+                try { $groupsForRender = sitc_prepare_grouped_items($sourceGroups); }
+                catch (Throwable $e) { error_log('SITC Renderer grouping fatal: '.$e->getMessage()); $groupsForRender = []; }
             }
         ?>
-        <?php if (!empty($groupsForRender)) : ?>
+        <?php if (!$use_fallback && !empty($groupsForRender)) : ?>
             <h3>Zutaten</h3>
             <?php foreach ($groupsForRender as $group): ?>
                 <h4 class="sitc-ingredient-group"><?php echo esc_html(trim((string)$group['name'])); ?></h4>
@@ -470,7 +499,7 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                     } elseif ($qInfo['low'] !== null) {
                         $dispQty = sitc_format_qty_display($qInfo['low']);
                     } else {
-                        $dispQty = trim((string)$qtyRaw);
+                        $v = sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw)); $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
                     }
                     $unitDe  = sitc_unit_to_de($unitRaw);
 
@@ -512,7 +541,7 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                         } elseif ($qInfo['low'] !== null) {
                             $dispQty = sitc_format_qty_display($qInfo['low']);
                         } else {
-                            $dispQty = trim((string)$qtyRaw);
+                            $v = sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw)); $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
                         }
                         $unitDe  = sitc_unit_to_de($unitRaw);
                         ?>
@@ -521,7 +550,7 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                 </ul>
             </div>
 
-        <?php elseif (!empty($ingredients)) : ?>
+        <?php elseif (!$use_fallback && !empty($ingredients)) : ?>
             <h3>Zutaten</h3>
             <ul class="sitc-ingredients" data-base-servings="<?php echo esc_attr($yield_num); ?>">
                 <?php foreach ($ingredients as $ing): ?>
@@ -536,7 +565,7 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                         } elseif ($qInfo['low'] !== null) {
                             $dispQty = sitc_format_qty_display($qInfo['low']);
                         } else {
-                            $dispQty = trim((string)$qtyRaw);
+                            $v = sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw)); $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
                         }
                         $unitDe  = sitc_unit_to_de($unitRaw);
                         $id_for  = 'sitc_chk_' . $post_id . '_' . md5($qtyRaw.'|'.$unitRaw.'|'.$name);
@@ -575,7 +604,7 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                         } elseif ($qInfo['low'] !== null) {
                             $dispQty = sitc_format_qty_display($qInfo['low']);
                         } else {
-                            $dispQty = trim((string)$qtyRaw);
+                            $v = sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw)); $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
                         }
                         $unitDe  = sitc_unit_to_de($unitRaw);
                         ?>
@@ -583,6 +612,40 @@ function sitc_render_recipe_shortcode($post_id = 0) {
                     <?php endforeach; ?>
                 </ul>
             </div>
+        <?php else: // Fallback: simple list from schema -> recipeIngredient ?>
+            <?php
+                $rawLines = [];
+                $schema_json = get_post_meta($post_id, '_sitc_schema_recipe_json', true);
+                if (is_string($schema_json) && $schema_json !== '') {
+                    $schema = json_decode($schema_json, true);
+                    if (is_array($schema) && !empty($schema['recipeIngredient'])) {
+                        $src = $schema['recipeIngredient'];
+                        if (!is_array($src)) { $src = [$src]; }
+                        foreach ($src as $s) {
+                            $t = trim((string)$s);
+                            if ($t !== '') $rawLines[] = $t;
+                        }
+                    }
+                }
+                if (!$rawLines && !empty($ingredients)) {
+                    foreach ((array)$ingredients as $ing) {
+                        $qty  = trim((string)($ing['qty'] ?? ''));
+                        $unit = trim((string)($ing['unit'] ?? ''));
+                        $name = trim((string)($ing['name'] ?? ''));
+                        $line = trim(($qty !== '' ? $qty.' ' : '') . ($unit !== '' ? $unit.' ' : '') . $name);
+                        if ($line !== '') $rawLines[] = $line;
+                    }
+                }
+                $rawLines = array_values(array_filter(array_map('trim', (array)$rawLines), function($s){ return $s !== ''; }));
+            ?>
+            <?php if (!empty($rawLines)) : ?>
+                <h3>Zutaten</h3>
+                <ul class="sitc-ingredients-fallback">
+                    <?php foreach ($rawLines as $line): ?>
+                        <li><?php echo esc_html($line); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
         <?php endif; ?>
 
         <?php if (!empty($instructions)) : ?>

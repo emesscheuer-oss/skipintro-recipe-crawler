@@ -37,8 +37,13 @@ function sitc_render_import_form() {
     // Formular-Verarbeitung
     if (!empty($_POST['sitc_frontend_import']) && !empty($_POST['sitc_recipe_url'])) {
         $url = esc_url_raw($_POST['sitc_recipe_url']);
-        // Use v2 parser (structured + legacy mapping)
-        $recipe = sitc_parse_recipe_from_url_v2($url);
+        // Use v2 parser (structured + legacy mapping) guarded against fatals
+        try {
+            $recipe = sitc_parse_recipe_from_url_v2($url);
+        } catch (Throwable $e) {
+            error_log('SITC Frontend Import fatal: ' . $e->getMessage());
+            $recipe = null;
+        }
         if ($recipe) {
             $post_id = wp_insert_post([
                 'post_title'   => !empty($recipe['title']) ? $recipe['title'] : 'Unbenanntes Rezept',
