@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 declare(strict_types=1);
-if (!defined('ABSPATH')) exit;
 
+if (!defined('ABSPATH')) exit;
 function sitc_normalize_array_meta($value) {
     if (is_array($value)) return $value;
     if (is_string($value) && $value !== '') {

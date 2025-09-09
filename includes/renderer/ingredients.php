@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 declare(strict_types=1);
-if (!defined('ABSPATH')) exit;
 
+if (!defined('ABSPATH')) exit;
 function sitc_render_ingredients(array $data): string {
     $post_id      = (int)($data['post_id'] ?? 0);
     $yield_num    = (int)($data['yield_num'] ?? 2);

@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 declare(strict_types=1);
-if (!defined('ABSPATH')) exit;
 
+if (!defined('ABSPATH')) exit;
 function sitc_render_instructions(array $data): string {
     $instructions = array_values(array_filter(array_map('trim', (array)($data['instructions'] ?? []))));
     if (empty($instructions)) return '';

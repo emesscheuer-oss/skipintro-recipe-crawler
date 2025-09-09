@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 declare(strict_types=1);
-if (!defined('ABSPATH')) exit;
 
+if (!defined('ABSPATH')) exit;
 function sitc_render_dev_badge(array $payload, array $opts = []): string {
     $post_id = (int)($payload['post_id'] ?? 0);
     $ingredients = (array)($payload['ingredients'] ?? []);
