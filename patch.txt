@@ -1,0 +1,4 @@
+﻿*** Begin Patch
+*** Add File: test_patch_ok2.txt
++OK
+*** End Patch

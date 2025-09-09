@@ -1,0 +1,103 @@
+﻿    if ($v !== null) { $res['low'] = $v; }
+    return $res;
+}
+
+// Anzeige-Format (DE) mit Ganzzahl-Schwelle
+function sitc_format_qty_display($val): string {
+    if ($val === null) return '';
+    $v = (float)$val;
+    if (abs($v - round($v)) < 0.01) $v = round($v);
+    $s = number_format($v, 2, ',', '');
+    return rtrim(rtrim($s, '0'), ',');
+}
+
+// Centralized renderer for one ingredient li from structured fields
+function sitc_render_ingredient_li(int $post_id, string $qtyRaw, string $unitRaw, string $name): void {
+    $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
+    $qInfo   = sitc_parse_qty_or_range($qtyRaw);
+    if ($qInfo['isRange']) {
+        $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
+    } elseif ($qInfo['low'] !== null) {
+        $dispQty = sitc_format_qty_display($qInfo['low']);
+    } else {
+        $v = sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
+        $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
+    }
+    $unitDe  = sitc_unit_to_de($unitRaw);
+    $id_for  = 'sitc_chk_' . $post_id . '_' . md5($qtyRaw.'|'.$unitRaw.'|'.$name);
+    ?>
+    <li class="sitc-ingredient"
+        <?php if ($qInfo['isRange']): ?>
+            data-qty-low="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['low'])); ?>"
+            data-qty-high="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['high'])); ?>"
+        <?php else: ?>
+            data-qty="<?php echo esc_attr($qInfo['low'] !== null ? str_replace(',','.', (string)$qInfo['low']) : ''); ?>"
+        <?php endif; ?>
+        data-unit="<?php echo esc_attr($unitDe); ?>" data-name="<?php echo esc_attr($name); ?>">
+        <label for="<?php echo esc_attr($id_for); ?>">
+            <input type="checkbox" id="<?php echo esc_attr($id_for); ?>" class="sitc-chk">
+            <span class="sitc-line">
+                <span class="sitc-qty"><?php echo esc_html($dispQty); ?></span>
+                <?php if ($unitDe !== ''): ?><span class="sitc-unit"> <?php echo esc_html($unitDe); ?></span><?php endif; ?>
+                <span class="sitc-name"> <?php echo esc_html($nameDisp); ?></span>
+            </span>
+        </label>
+    </li>
+    <?php
+}
+
+// Render li from a raw source line via central pipeline
+    $id_for  = 'sitc_chk_' . $post_id . '_' . md5($qtyRaw.'|'.$unitRaw.'|'.$name);
+    ?>
+    <li class="sitc-ingredient"
+        <?php if ($qInfo['isRange']): ?>
+            data-qty-low="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['low'])); ?>"
+            data-qty-high="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['high'])); ?>"
+        <?php else: ?>
+            data-qty="<?php echo esc_attr($qInfo['low'] !== null ? str_replace(',','.', (string)$qInfo['low']) : ''); ?>"
+        <?php endif; ?>
+        data-unit="<?php echo esc_attr($unitDe); ?>" data-name="<?php echo esc_attr($name); ?>">
+        <label for="<?php echo esc_attr($id_for); ?>">
+            <input type="checkbox" id="<?php echo esc_attr($id_for); ?>" class="sitc-chk">
+            <span class="sitc-line">
+                <span class="sitc-qty"><?php echo esc_html($dispQty); ?></span>
+                <?php if ($unitDe !== ''): ?><span class="sitc-unit"> <?php echo esc_html($unitDe); ?></span><?php endif; ?>
+                <span class="sitc-name"> <?php echo esc_html($nameDisp); ?></span>
+            </span>
+        </label>
+    </li>
+    <?php
+}
+
+// Render li from a raw source line via central pipeline
+// Render li from a raw source line via central pipeline
+function sitc_render_ingredient_li_from_raw(int $post_id, string $line): void {
+    $raw = sitc_text_sanitize((string)$line);
+    if (function_exists('sitc_parse_ingredient_line_v3')) {
+        $p = sitc_parse_ingredient_line_v3($raw);
+    } else {
+        $p = sitc_parse_ingredient_line_v2($raw);
+    }
+    $name = trim((string)($p['item'] ?? ''));
+    $note = trim((string)($p['note'] ?? ''));
+    if ($note !== '') $name .= ' (' . $note . ')';
+    $qtyRaw = isset($p['qty']) ? (string)$p['qty'] : '';
+    $unitRaw = isset($p['unit']) ? (string)$p['unit'] : '';
+    sitc_render_ingredient_li($post_id, $qtyRaw, $unitRaw, $name);
+}
+
+// Mengen-Parsing: 1/2, 1 1/2, ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½, 1,5 => float
+function sitc_coerce_qty_float($qty) {
+    if ($qty === null) return null;
+    $s = trim((string)$qty);
+    $s = sitc_qty_pre_normalize($s);
+    if ($s === '') return null;
+    $s = sitc_replace_unicode_fractions($s);
+    if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $s, $m)) { return (float)$m[1] + ((float)$m[2]/max(1,(float)$m[3])); }
+    if (preg_match('/^(\d+)\/(\d+)$/', $s, $m)) { return ((float)$m[1])/max(1,(float)$m[2]); }
+    if (preg_match('/^(\d+(?:[\.,]\d+)?)\s*[-ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â]\s*\d+(?:[\.,]\d+)?$/u', $s, $m)) { return (float)str_replace(',', '.', $m[1]); }
+    if (preg_match('/^\d+(?:[\.,]\d+)?$/', $s)) { return (float)str_replace(',', '.', $s); }
+    return null;
+}
+
+function sitc_format_qty_de($val) {

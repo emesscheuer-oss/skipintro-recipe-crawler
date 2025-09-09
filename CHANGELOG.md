@@ -26,7 +26,7 @@
 ### Files
 - includes/renderer.php
 - includes/parser.php (sanitize helpers)
-- includes/refresh.php
+- includes/refresh.php 
 - skipintro-recipe-crawler.php
 - CHANGELOG.md
 - PROJECT_PLAN.md
