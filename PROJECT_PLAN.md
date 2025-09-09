@@ -1,13 +1,10 @@
-# SkipIntro Recipe Crawler — Projektplan (Meta)
+﻿# SkipIntro Recipe Crawler — Projektplan (Meta)
 
 > Stand (Codebasis): 0.5.16 (Rollback-Baseline, 2025-09-09)  
 > Doku-Einträge aus späteren Work-in-Progress-Versionen werden nach dem Refactor neu bewertet.
 
-## 0 — Basis (0.5.x)
-0.1 Parser/Renderer stabilisieren — ☐  
-0.2 Skalierung fixen — ☐  
-0.3 Checkboxen fixen — ☐  
-0.4 Button-Ausrichtung fixen — ☐  
+
+0.5 Renderer modularisiert (No-Functional-Change) — ✓ (umgesetzt in 0.5.25)  
 
 ## 1 — Frontend-Funktionsbuttons
 1.1 Foto/Galerie (Upload/Kamera, löschen) — ☐  

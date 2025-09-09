@@ -1,3 +1,10 @@
+﻿## [0.5.25] - 2025-09-09
+### Changed
+- Renderer modularisiert (header/ingredients/instructions/helpers/dev_badge), keine Funktionsänderung.
+### Files
+- includes/renderer.php
+- includes/renderer/*.php (neu)
+
 ## [0.5.24] - 2025-09-09
 ### Changed
 - Rollback: Repository-Code auf Stand 0.5.16 zurückgesetzt (Baseline).
