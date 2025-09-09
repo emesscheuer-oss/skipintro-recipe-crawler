@@ -1,6 +1,6 @@
 ## [0.5.24] - 2025-09-09
 ### Changed
-- Rollback: Repository-Code auf Stand **0.5.16** zurückgesetzt (Baseline).
+- Rollback: Repository-Code auf Stand 0.5.16 zurückgesetzt (Baseline).
 - CHANGELOG und PROJECT_PLAN synchronisiert; Doku-Einträge >0.5.16 (0.5.17–0.5.23) verworfen.
 - Ausgangspunkt für nächste Schritte: Modularisierung des Renderers, danach Parser-Fixes neu.
 ### Files
@@ -11,10 +11,10 @@
 
 ## [0.5.16] - 2025-09-04
 ### Fixed
-- Zentrale Render-Pipeline erzwungen (sanitize ? pre-normalize ? parse ? format DE) in allen Renderpfaden; keine Rohstrings mehr im Frontend.
+- Zentrale Render-Pipeline erzwungen (sanitize → pre-normalize → parse → format (DE)) in allen Renderpfaden; keine Rohstrings mehr im Frontend.
 - Dev-Diagnostik-Badge (nur Dev-Mode) zeigt Pipeline für die ersten 5 Zutatenzeilen (raw/sanitized/prenorm/parsed/display + source).
-- Refresh-Flow: Dev-Option ‚Force refresh‘ ignoriert Locks, parsed Felder werden überschrieben; Feldquellen gespeichert und genutzt.
-- Mojibake-Quelle entschärft: Sanitize-Reihenfolge auf Entities ? NFC ? Mojibake ? Whitespace umgestellt; „StÃ¼ck“ ? „Stück“ vor dem Parsen.
+- Refresh-Flow: Dev-Option „Force refresh“ ignoriert Locks, geparste Felder werden überschrieben; Feldquellen gespeichert und genutzt.
+- Mojibake-Quelle entschärft: Sanitize-Reihenfolge auf Entities → NFC → Mojibake → Whitespace umgestellt; „Stück“ normalisiert vor dem Parsen.
 - DE-Einheiten und „ca.“/Stopwörter konsolidiert; Unicode-Brüche am Zeilenanfang sicher erkannt und skaliert.
 ### Files
 - includes/renderer.php
@@ -23,6 +23,7 @@
 - skipintro-recipe-crawler.php
 - CHANGELOG.md
 - PROJECT_PLAN.md
+
 ## [0.5.15] - 2025-09-04
 ### Fixed
 - Globale Pipeline fÃ¼r Zutaten-Normalisierung (DE) durchgÃ¤ngig erzwungen: Sanitize â†’ Pre-Normalize â†’ Parse â†’ Format (DE) â†’ Render; keine Rohstrings mehr in der Anzeige.
@@ -195,4 +196,5 @@
 ## Format
 - [Version] ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Datum
 - BlÃƒÆ’Ã‚Â¶cke: Added, Changed, Fixed, Removed.
+
 
