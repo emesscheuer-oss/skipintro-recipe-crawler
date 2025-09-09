@@ -2,7 +2,7 @@
 /*
 Plugin Name: Skip Intro Recipe Crawler
 Description: Importiert Rezepte von externen URLs (extrahiert JSON-LD Recipe-Daten) und speichert sie als Beiträge mit Kategorien & skalierbaren Zutaten.
- Version:  0.5.20
+ Version:  0.5.16
 Author: SKIP INTRO OHG
 */
 

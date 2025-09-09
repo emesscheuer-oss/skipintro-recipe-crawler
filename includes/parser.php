@@ -854,8 +854,6 @@ function sitc_query_selector(DOMXPath $xp, string $selector, ?DOMNode $context=n
 // - Common UTF-8 mojibake fixes
 function sitc_text_sanitize($val): string {
     $s = is_string($val) ? $val : json_encode($val);
-    // Normalize NBSP and narrow NBSP to regular spaces
-    $s = str_replace(["\xC2\xA0","\xE2\x80\xAF"], ' ', $s);
     // 1) Decode entities first
     $s = html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     // 2) NFC normalize early to stabilize sequences
