@@ -104,9 +104,7 @@ function sitc_render_ingredients(array $data): string {
         <?php endif; ?>
     <?php endif;
     return (string)ob_get_clean();
-}<?php
-declare(strict_types=1);
-if (!defined('ABSPATH')) exit;
+}
 
 // Centralized renderer for one ingredient li from structured fields
 function sitc_render_ingredient_li(int $post_id, string $qtyRaw, string $unitRaw, string $name): void {
