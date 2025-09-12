@@ -1,12 +1,7 @@
-<?php
+﻿<?php
 declare(strict_types=1);
 
 if (!defined('ABSPATH')) exit;
-
-// Single Source of Truth for parsing/tokenizing helpers used by renderer
-require_once __DIR__ . '/../parser_helpers.php';
-
-if (!function_exists('sitc_normalize_array_meta')) {
 function sitc_normalize_array_meta($value) {
     if (is_array($value)) return $value;
     if (is_string($value) && $value !== '') {
@@ -17,17 +12,13 @@ function sitc_normalize_array_meta($value) {
     }
     return [];
 }
-}
 
-if (!function_exists('sitc_normalize_scalar_number')) {
 function sitc_normalize_scalar_number($value, $default = 2) {
     if ($value === '' || $value === null) return $default;
     $v = is_numeric($value) ? (float)$value : (float)str_replace(',', '.', (string)$value);
     return $v > 0 ? $v : $default;
 }
-}
 
-if (!function_exists('sitc_unit_to_de')) {
 function sitc_unit_to_de($unit) {
     $u = trim(mb_strtolower((string)$unit, 'UTF-8'));
     if ($u === '') return '';
@@ -35,7 +26,7 @@ function sitc_unit_to_de($unit) {
         'tsp' => 'TL', 'teaspoon' => 'TL', 'teaspoons' => 'TL', 'tl' => 'TL',
         'tbsp' => 'EL', 'tablespoon' => 'EL', 'tablespoons' => 'EL', 'el' => 'EL',
         'cup' => 'Tasse', 'cups' => 'Tasse', 'tasse' => 'Tasse',
-        'piece' => 'Stück', 'pieces' => 'Stück', 'stueck' => 'Stück', 'stück' => 'Stück',
+        'piece' => 'StÃ¼ck', 'pieces' => 'StÃ¼ck', 'stueck' => 'StÃ¼ck', 'stÃ¼ck' => 'StÃ¼ck',
         'pinch' => 'Prise', 'prisen' => 'Prise', 'prise' => 'Prise',
         'can' => 'Dose', 'dose' => 'Dose',
         'bunch' => 'Bund', 'bund' => 'Bund',
@@ -49,9 +40,7 @@ function sitc_unit_to_de($unit) {
     $res = $map[$u] ?? $unit;
     return $res;
 }
-}
 
-if (!function_exists('sitc_ucfirst_de')) {
 function sitc_ucfirst_de(string $s): string {
     if ($s === '') return $s;
     $first = mb_substr($s, 0, 1, 'UTF-8');
@@ -61,9 +50,7 @@ function sitc_ucfirst_de(string $s): string {
     }
     return $s;
 }
-}
 
-if (!function_exists('sitc_cased_de_ingredient')) {
 function sitc_cased_de_ingredient(string $s): string {
     $t = trim($s);
     if ($t === '') return $t;
@@ -73,9 +60,41 @@ function sitc_cased_de_ingredient(string $s): string {
     }
     return $t;
 }
+
+function sitc_qty_pre_normalize(string $s): string {
+    $t = trim($s);
+    if ($t === '') return '';
+    $t = preg_replace('/^(ca\.|circa|etwa|ungef\.?|about|approx\.?|approximately)\s+/iu', '', $t);
+    $t = preg_replace('/\s*,\s*/u', ',', $t);
+    $t = preg_replace('/\s*\.\s*/u', '.', $t);
+    return sitc_replace_unicode_fractions($t);
 }
 
-if (!function_exists('sitc_format_qty_display')) {
+function sitc_replace_unicode_fractions(string $s): string {
+    $map = [
+        'Â½' => '1/2', 'Â¼' => '1/4', 'Â¾' => '3/4',
+        'â…“' => '1/3', 'â…”' => '2/3', 'â…›' => '1/8', 'â…œ' => '3/8', 'â…' => '5/8', 'â…ž' => '7/8',
+    ];
+    return strtr($s, $map);
+}
+
+function sitc_parse_qty_or_range($qty): array {
+    $s = trim((string)$qty);
+    if ($s === '') return ['isRange'=>false,'low'=>null,'high'=>null];
+    $s = sitc_qty_pre_normalize($s);
+    if (preg_match('/^(\d+(?:[\.,]\d+)?)\s*[â€“-]\s*(\d+(?:[\.,]\d+)?)$/u', $s, $m)) {
+        return [
+            'isRange' => true,
+            'low'  => (float)str_replace(',', '.', $m[1]),
+            'high' => (float)str_replace(',', '.', $m[2]),
+        ];
+    }
+    if (preg_match('/^(\d+(?:[\.,]\d+)?)$/u', $s, $m)) {
+        return ['isRange'=>false,'low'=>(float)str_replace(',', '.', $m[1]),'high'=>null];
+    }
+    return ['isRange'=>false,'low'=>null,'high'=>null];
+}
+
 function sitc_format_qty_display($val): string {
     if ($val === null) return '';
     $v = (float)$val;
@@ -83,13 +102,20 @@ function sitc_format_qty_display($val): string {
     $s = number_format($v, 2, ',', '');
     return rtrim(rtrim($s, '0'), ',');
 }
+
+function sitc_coerce_qty_float($qty) {
+    $s = trim((string)$qty);
+    if ($s === '') return null;
+    $s = sitc_replace_unicode_fractions($s);
+    if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $s, $m)) { return (float)$m[1] + ((float)$m[2]/max(1,(float)$m[3])); }
+    if (preg_match('/^(\d+)\/(\d+)$/', $s, $m)) { return ((float)$m[1])/max(1,(float)$m[2]); }
+    if (preg_match('/^(\d+(?:[\.,]\d+)?)\s*[â€“-]\s*\d+(?:[\.,]\d+)?$/u', $s, $m)) { return (float)str_replace(',', '.', $m[1]); }
+    if (preg_match('/^\d+(?:[\.,]\d+)?$/', $s)) { return (float)str_replace(',', '.', $s); }
+    return null;
 }
 
-if (!function_exists('sitc_format_qty_de')) {
 function sitc_format_qty_de($val) {
     if ($val === null) return '';
     $s = number_format((float)$val, 2, ',', '');
     return rtrim(rtrim($s, '0'), ',');
 }
-}
-

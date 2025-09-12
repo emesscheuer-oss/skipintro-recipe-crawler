@@ -1,0 +1,19 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Recipe",
+  "name": "Butter Chicken (Fixture)",
+  "recipeIngredient": [
+    "0,50 Stück Zitrone (Saft)",
+    "4 Knoblauchzehen",
+    "ca. 60 ml Öl zum Anbraten",
+    "ca. 15 g Ingwer-Stück",
+    "250 g Hähnchenbrust",
+    "1½ EL Joghurt",
+    "1 1/2 TL Garam Masala"
+  ],
+  "recipeInstructions": [
+    "Zutaten mischen.",
+    "Kurz marinieren.",
+    "Zubereiten."
+  ]
+}

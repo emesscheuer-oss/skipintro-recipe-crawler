@@ -1,0 +1,20 @@
+<!-- SITC_CHANGELOG_TOP: new entries must be inserted BELOW this line -->
+
+## [0.5.34] – 2025-09-11 09:36
+### Changed
+- CHANGELOG-Format vereinheitlicht (Datum mit Uhrzeit, Reihenfolge der Unterüberschriften, einheitliches Files-Subheading) und neuester Eintrag ergänzt.
+### Files
+- CHANGELOG.md
+
+## [0.5.33] – 2025-09-11
+### Changed
+- Parser-Lab: Diagnose erweitert (HTML-Länge, JSON-LD-Count, Parse-Dauer, Flags/Confidence, JSON-LD-Kurzsicht); nie leere Tabelle.
+### Added
+- Parser-Lab: Fixture-Index & Schnellzugriff (Butter Chicken, Ente Chop Suey, Hähnchen Biryani).
+### Files
+- tools/parser_lab/run.php
+- tools/parser_lab/lib/harness.php
+- tools/parser_lab/index.php
+
+## [0.5.32] - 2025-09-11
+### Fixed

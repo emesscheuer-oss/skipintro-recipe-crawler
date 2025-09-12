@@ -1,0 +1,80 @@
+<!-- SITC_CHANGELOG_TOP: new entries must be inserted BELOW this line -->
+
+## [0.5.33] – 2025-09-11
+### Changed
+- Parser-Lab: Diagnose erweitert (HTML-Länge, JSON-LD-Count, Parse-Dauer, Flags/Confidence, JSON-LD-Kurzsicht); nie leere Tabelle.
+### Added
+- Parser-Lab: Fixture-Index & Schnellzugriff (Butter Chicken, Ente Chop Suey, Hähnchen Biryani).
+### Files
+- tools/parser_lab/run.php
+- tools/parser_lab/lib/harness.php
+- tools/parser_lab/index.php
+
+## [0.5.32] - 2025-09-11
+### Fixed
+- Parser-Lab: vollständige Fehlerdiagnostik (Exceptions/last error) statt stummem Fallback.
+### Changed
+- Parser-Lab: .jsonld-Fixtures werden als HTML mit JSON-LD Script eingebettet; bei fehlenden strukturierten Feldern wird eine sinnvolle Fallback-Struktur erzeugt, damit die Tabelle nie leer ist.
+### Files
+- tools/parser_lab/lib/harness.php
+- tools/parser_lab/run.php
+
+## [0.5.31] – 2025-09-10
+### Fixed
+- Parser-Lab: Whitescreen endgültig entfernt (Error/Shutdown-Guards); Diagnosen und Tabellen-Ausgabe erscheinen immer.
+### Added
+- Parser-Lab wiederhergestellt: Fixtures (butter_chicken, ente_chop_suey, biryani), Harness & Tabellen-Ausgabe; Debug-Modus ohne Whitescreen.
+### Files
+- tools/parser_lab/run.php
+- tools/parser_lab/lib/harness.php (neu)
+
+## [0.5.30] - 2025-09-10
+### Changed
+- Parser: `recipeIngredient` liefert strukturierte Einträge (raw, qty[float|{low,high}], unit, item, note); Stopwörter/Unicode‑Brüche/Bereiche normalisiert; Mehrfach-Mengen pro Zeile gesplittet.
+### Files
+- includes/parser.php
+
+## [0.5.29] - 2025-09-10
+### Added
+- Parser-Fixture-Lab (tools/parser_lab) zum lokalen Testen von HTML/JSON-LD gegen den vorhandenen Parser.
+### Files
+- tools/parser_lab/**
+
+## [0.5.28] - 2025-09-10
+### Added
+- Test-Lab (tools/qty_lab) für Mengen-/Bruch-Parsing erstellt (Standalone, Diagnosezwecke)
+### Files
+- tools/qty_lab/lib_qty.php
+- tools/qty_lab/test.php
+
+## [0.5.27] - 2025-09-10
+### Fixed
+- Bruchmengen (½, 1½) inkl. gemischter Zahlen robust erkannt & skaliert.
+- Basiseinheiten (ml/g/l) skalierbar; ca./Stopwörter entfernt.
+- Dedupe & Großschreibung der Zutaten-Ausgabe (keine Doppelungen; erstes Wort groß).
+- Dev-Diagnostik zeigt alle Zutatenzeilen.
+### Files
+- includes/renderer/helpers_extra.php (neu)
+- includes/renderer.php
+- includes/renderer/ingredients.php
+- includes/renderer/dev_badge.php
+
+## [0.5.26] - 2025-09-09
+### Changed
+- Renderer-Anbindung nach Modularisierung repariert; BC-Shims ergänzt; keine Funktionsänderung.
+### Files
+- includes/renderer.php
+
+## [0.5.25] - 2025-09-09
+### Changed
+- Renderer modularisiert (header/ingredients/instructions/helpers/dev_badge), keine Funktionsänderung.
+### Files
+- includes/renderer.php
+- includes/renderer/*.php (neu)
+
+## [0.5.24] - 2025-09-09
+### Changed
+- Rollback: Repository-Code auf Stand 0.5.16 zurückgesetzt (Baseline).
+- CHANGELOG und PROJECT_PLAN synchronisiert; Doku-Einträge >0.5.16 (0.5.17–0.5.23) verworfen.
+- Ausgangspunkt für nächste Schritte: Modularisierung des Renderers, danach Parser-Fixes neu.
+### Files

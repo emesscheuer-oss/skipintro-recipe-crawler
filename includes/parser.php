@@ -1,6 +1,13 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+// Load parser helpers (PCRE2-safe tokenizer, qty parsing, unit aliases)
+// Keep renderer untouched; helpers are parser-internal only.
+$__sitc_helpers = __DIR__ . '/parser_helpers.php';
+if (is_file($__sitc_helpers)) {
+    require_once $__sitc_helpers;
+}
+
 /**
  * Parser: Extrahiert Rezeptdaten aus einer URL (JSON-LD bevorzugt, Fallback HTML).
  */
@@ -180,8 +187,16 @@ function sitc_parse_recipe_from_url_v2(string $url) {
         foreach ($r['ingredientsParsed'] as $p) {
             $name = trim((string)($p['item'] ?? ''));
             if (!empty($p['note'])) $name .= ' ('.trim((string)$p['note']).')';
+            $qval = $p['qty'] ?? '';
+            if (is_array($qval) && isset($qval['low'],$qval['high'])) {
+                $qtyOut = str_replace(',', '.', (string)((float)$qval['low'])) . '-' . str_replace(',', '.', (string)((float)$qval['high']));
+            } elseif ($qval === null || $qval === '') {
+                $qtyOut = '';
+            } else {
+                $qtyOut = is_numeric($qval) ? str_replace(',', '.', (string)$qval) : (string)$qval;
+            }
             $ingredients_struct[] = [
-                'qty'  => $p['qty'] ?? '',
+                'qty'  => $qtyOut,
                 'unit' => $p['unit'] ?? '',
                 'name' => $name !== '' ? $name : ($p['raw'] ?? '')
             ];
@@ -608,34 +623,42 @@ function sitc_normalize_recipe(array $recipe, DOMDocument $doc, ?string $pageUrl
     $yieldParsed = sitc_parse_yield_normalized($rawYield);
     $recipe['yieldNormalized'] = $yieldParsed + ['raw'=>$rawYield];
 
-    // Ingredients + groups + parsed
-    $ingList = [];
+    // Ingredients -> structured [{ raw, qty, unit, item, note? }]
+    $ingInput = [];
     if (isset($recipe['recipeIngredient'])) {
-        $ingList = $recipe['recipeIngredient'];
-        if (!is_array($ingList)) $ingList = [$ingList];
-        $ind = array_values(array_filter(array_map(function($s){ return sitc_clean_text((string)$s); }, $ingList), function($s){ return $s !== ''; }));
-        // De-Dupe (case-/diacritics-/whitespace-insensitiv)
-        $seen = [];
-        $dedup = [];
-        foreach ($ind as $line) {
-            $key = sitc_canon_key($line);
-            if ($key === '') continue;
-            if (!isset($seen[$key])) { $seen[$key] = true; $dedup[] = $line; }
-        }
-        $ingList = $dedup;
+        $ingInput = $recipe['recipeIngredient'];
+        if (!is_array($ingInput)) $ingInput = [$ingInput];
     }
-    $recipe['recipeIngredient'] = $ingList;
-
-    // Create ingredientsParsed
-    $parsed = [];
-    foreach ($ingList as $raw) {
-        if (function_exists('sitc_parse_ingredient_line_v3')) {
-            $parsed[] = sitc_parse_ingredient_line_v3($raw);
+    $struct = [];
+    foreach ($ingInput as $entry) {
+        if (is_array($entry) && (isset($entry['raw']) || isset($entry['item']))) {
+            // already structured from source
+            $raw = isset($entry['raw']) ? (string)$entry['raw'] : trim((string)($entry['item'] ?? ''));
+            $out = sitc_struct_from_line($raw);
+            foreach ($out as $s) $struct[] = $s;
         } else {
-            $parsed[] = sitc_parse_ingredient_line_v2($raw);
+            $raw = sitc_clean_text((string)$entry);
+            if ($raw === '') continue;
+            foreach (sitc_struct_from_line($raw) as $s) $struct[] = $s;
         }
     }
-    $recipe['ingredientsParsed'] = $parsed;
+    // De-Dupe on display-like key: qty (single or low-high) + unit + item (canon)
+    $seen = [];
+    $dedup = [];
+    foreach ($struct as $s) {
+        $q = $s['qty'];
+        if (is_array($q) && isset($q['low'],$q['high'])) { $qk = sprintf('%.3f-%.3f', (float)$q['low'], (float)$q['high']); }
+        elseif ($q !== null) { $qk = sprintf('%.3f', (float)$q); } else { $qk = ''; }
+        $uk = mb_strtolower(trim((string)($s['unit'] ?? '')), 'UTF-8');
+        $nk = sitc_canon_key((string)($s['item'] ?? ''));
+        $key = $qk.'|'.$uk.'|'.$nk;
+        if ($key === '||') continue;
+        if (!isset($seen[$key])) { $seen[$key] = true; $dedup[] = $s; }
+    }
+    $struct = $dedup;
+
+    $recipe['recipeIngredient'] = $struct;
+    $recipe['ingredientsParsed'] = $struct;
 
     // Instructions -> flatten
     if (isset($recipe['recipeInstructions'])) {
@@ -817,6 +840,8 @@ function sitc_flatten_instructions($instr): array {
         }
     } elseif (is_string($instr)) {
         $parts = preg_split('/\r?\n|\.\s+(?=[A-Z├ä├û├£])/u', $instr);
+        if ($parts === false) { trigger_error('Regex failed @sitc_flatten_instructions preg_split', E_USER_WARNING); $parts = [$instr]; }
+        if ($parts === false) { trigger_error('Regex failed @sitc_flatten_instructions preg_split', E_USER_WARNING); $parts = [$instr]; }
         foreach ($parts as $p) { $t = sitc_clean_text($p); if ($t!=='') $out[] = ['@type'=>'HowToStep','text'=>$t]; }
     }
     return $out;
@@ -874,6 +899,163 @@ function sitc_text_sanitize($val): string {
     return $s;
 }
 
+// ===== Quantities + struct helpers (parser-scoped) =====
+
+function sitc_unicode_fraction_decimal_map(): array {
+    return [
+        '¼' => 0.25,
+        '½' => 0.5,
+        '¾' => 0.75,
+        '⅓' => 1/3,
+        '⅔' => 2/3,
+        '⅛' => 0.125,
+    ];
+}
+
+if (!function_exists('sitc_qty_pre_normalize_parser')) {
+function sitc_qty_pre_normalize_parser(string $s): string {
+    $t = trim($s);
+    if ($t === '') return '';
+    // NBSP / NNBSP to space
+    $t = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $t);
+    // drop leading stopwords and (ca.) suffix
+    $t = preg_replace('/^(ca\.?|circa|etwa|ungef\.?|ungef(?:ae|ä)hr\.?|about|approx\.?|approximately)\s+/iu', '', $t);
+    $t = preg_replace('/\((?:ca\.?|circa|about|approx\.?)\)\s*$/iu', '', $t);
+    // unify range separators
+    $t = preg_replace('/[\x{2012}-\x{2015}]/u', '-', $t);
+    // tighten slash
+    $t = preg_replace('/\s*\/\s*/u', '/', $t);
+    // unicode fractions to decimals or mixed numbers
+    $map = sitc_unicode_fraction_decimal_map();
+    // mixed number: 1½ -> 1 + 0.5
+    $t = preg_replace_callback('/(\d)\s*(['.preg_quote(implode('', array_keys($map)), '/').'])/u', function($m) use ($map){
+        $dec = $map[$m[2]] ?? null; if ($dec === null) return $m[0];
+        $sum = (float)$m[1] + (float)$dec;
+        return str_replace('.', ',', (string)$sum); // favor comma within text
+    }, $t);
+    // standalone unicode fraction -> decimal string
+    $t = preg_replace_callback('/(['.preg_quote(implode('', array_keys($map)), '/').'])/u', function($m) use ($map){
+        $dec = $map[$m[1]] ?? null; return $dec !== null ? str_replace('.', ',', (string)$dec) : $m[1];
+    }, $t);
+    return $t;
+}
+}
+
+function sitc_qty_to_float(string $num): ?float {
+    $n = trim($num);
+    if ($n === '') return null;
+    // mixed number: 1 1/2
+    if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $n, $m)) return (float)$m[1] + ((float)$m[2]/max(1,(float)$m[3]));
+    // fraction a/b
+    if (preg_match('/^(\d+)\/(\d+)$/', $n, $m)) return ((float)$m[1])/max(1,(float)$m[2]);
+    // decimal with comma or dot
+    if (preg_match('/^\d+(?:[\.,]\d+)?$/', $n)) return (float)str_replace(',', '.', $n);
+    return null;
+}
+
+if (!function_exists('sitc_parse_qty_or_range_parser')) {
+function sitc_parse_qty_or_range_parser(string $s) {
+    $t = sitc_qty_pre_normalize_parser($s);
+    // range a–b (minus or unicode dashes)
+    if (preg_match('/^(\S+)\h*[\-\x{2012}-\x{2015}]\h*(\S+)$/u', $t, $m)) {
+        $a = sitc_qty_from_token($m[1]);
+        $b = sitc_qty_from_token($m[2]);
+        if ($a !== null && $b !== null) return ['low'=>(float)$a,'high'=>(float)$b];
+    }
+    $v = sitc_qty_from_token($t);
+    if ($v !== null) return (float)$v;
+    return null;
+}
+}
+
+if (!function_exists('sitc_unit_alias_canonical')) {
+function sitc_unit_alias_canonical(string $u): ?string {
+    $m = [
+        'g'=>'g','gram'=>'g','grams'=>'g','gramm'=>'g',
+        'kg'=>'kg',
+        'ml'=>'ml','milliliter'=>'ml','millilitre'=>'ml',
+        'l'=>'l','liter'=>'l','litre'=>'l',
+        'tl'=>'tsp','teeloeffel'=>'tsp','teelöffel'=>'tsp','tsp'=>'tsp','teaspoon'=>'tsp','teaspoons'=>'tsp',
+        'el'=>'tbsp','essloeffel'=>'tbsp','esslöffel'=>'tbsp','tbsp'=>'tbsp','tablespoon'=>'tbsp','tablespoons'=>'tbsp',
+        'tasse'=>'cup','cup'=>'cup','cups'=>'cup',
+        'prise'=>'pinch','pinch'=>'pinch',
+        'stueck'=>'piece','stück'=>'piece','piece'=>'piece','pieces'=>'piece',
+        'bund'=>'bunch','bunch'=>'bunch',
+        'zehe'=>'clove','zehen'=>'clove','clove'=>'clove','cloves'=>'clove'
+    ];
+    $k = mb_strtolower(trim($u), 'UTF-8');
+    if ($k === 'stk' || $k === 'stück') return 'piece';
+    return $m[$k] ?? null;
+}
+}
+
+if (!function_exists('sitc_struct_from_line')) {
+function sitc_struct_from_line(string $rawLine): array {
+    $out = [];
+    $pn = sitc_qty_pre_normalize_parser($rawLine);
+    // split into parts by multiple qty tokens or common separators
+    $parts = preg_split('/\s*[•;\u00B7]\s*|\s{2,}/u', $pn);
+    if ($parts === false) { trigger_error('Regex failed @sitc_struct_from_line preg_split', E_USER_WARNING); $parts = [$pn]; }
+    $parts = array_values(array_filter(array_map('trim',$parts), fn($s)=>$s!==''));
+    if (!$parts) $parts = [$pn];
+    foreach ($parts as $part) {
+        // If more than one qty token in part, split before subsequent ones
+        if (preg_match_all('/(?:(?:\d+(?:[\.,]\d+)?)|\d+\/\d+)/u', $part, $mm, PREG_OFFSET_CAPTURE) && count($mm[0])>1) {
+            $segments = [];
+            $last = 0;
+            foreach ($mm[0] as $i=>$m) {
+                if ($i===0) continue;
+                $off = $m[1];
+                $segments[] = trim(substr($part, $last, $off-$last));
+                $last = $off;
+            }
+            $segments[] = trim(substr($part, $last));
+        } else {
+            $segments = [$part];
+        }
+        foreach ($segments as $seg) {
+            if ($seg==='') continue;
+            $qtyField = null; $unitField = null; $itemField = ''; $noteField = null;
+            // qty + optional unit at start
+            if (preg_match('/^\s*([^\s,()]+)\s*(\p{L}+)?\s*(.*)$/u', $seg, $m)) {
+                $qtyParsed = sitc_parse_qty_or_range_parser($m[1]);
+                if (is_array($qtyParsed) || is_float($qtyParsed)) { $qtyField = $qtyParsed; }
+                $u = trim((string)($m[2] ?? ''));
+                if ($u !== '') { $unitField = sitc_unit_alias_canonical($u); }
+                $rest = trim((string)($m[3] ?? ''));
+                // Leading TK as note
+                if (preg_match('/^TK\b/u', $rest)) { $noteField = 'TK'; $rest = trim(preg_replace('/^TK\b\s*/u','',$rest)); }
+                // Parentheses note
+                if (preg_match('/^(.*)\(([^\)]+)\)\s*$/u', $rest, $n)) { $itemField = trim($n[1]); $noteField = trim(($noteField? $noteField.'; ':'').$n[2]); }
+                else $itemField = $rest;
+                // Trailing comma note
+                if (strpos($itemField, ',') !== false) {
+                    $parts2 = array_map('trim', explode(',', $itemField, 2));
+                    if (count($parts2)===2) { $itemField = $parts2[0]; $noteField = trim(($noteField? $noteField.'; ':'').$parts2[1]); }
+                }
+                // Hyphen item-note like "Ingwer-Stück"
+                if ($noteField===null && preg_match('/^(.+?)\s*[-–]\s*(St(ue|ü)ck|gehackt|rot)\b/u', $itemField, $h)) {
+                    $itemField = trim($h[1]); $noteField = $h[3]=='Stück' || $h[3]=='Stueck' ? 'Stück' : $h[3];
+                }
+                // Heuristic: Knoblauchzehen -> unit clove + item Knoblauch
+                if ($unitField===null && preg_match('/^knoblauchzehen?\b/iu', $itemField)) { $unitField='clove'; $itemField='Knoblauch'; }
+                if ($unitField===null && preg_match('/^(zehe|zehen)\b/iu', $itemField)) { $unitField='clove'; $itemField=preg_replace('/^(zehe|zehen)\b\s*/iu','',$itemField); }
+            } else {
+                $itemField = $seg;
+            }
+            $out[] = [
+                'raw'  => $seg,
+                'qty'  => $qtyField,
+                'unit' => $unitField,
+                'item' => trim($itemField),
+                'note' => $noteField !== null ? $noteField : null,
+            ];
+        }
+    }
+    return $out;
+}
+}
+
 // Backward-compat: existing code calls sitc_clean_text; delegate to sanitize
 function sitc_clean_text($val): string {
     return sitc_text_sanitize($val);
@@ -923,9 +1105,50 @@ function sitc_to_float(string $num): float {
     return (float)str_replace(',', '.', $num);
 }
 
+// PCRE2-safe split helper: never returns false
+if (!function_exists('sitc_pcre2_split')) {
+function sitc_pcre2_split(string $pattern, string $s): array {
+    $out = @preg_split($pattern, $s, -1, PREG_SPLIT_NO_EMPTY);
+    return is_array($out) ? $out : [$s];
+}
+}
+
+// Parse quantity token to float, handling unicode fractions, mixed numbers, and decimal comma
+if (!function_exists('sitc_qty_from_token')) {
+function sitc_qty_from_token(string $t): ?float {
+    $s = trim($t);
+    if ($s === '') return null;
+    // normalize decimal comma and slash spacing
+    $s = str_replace(',', '.', $s);
+    $s = preg_replace('/\s*\/\s*/u', '/', $s);
+    if ($s === null) $s = $t;
+    // map unicode fractions
+    $map = [
+        "½"=>0.5, "¼"=>0.25, "¾"=>0.75, "⅓"=>0.3333, "⅔"=>0.6667, "⅛"=>0.125,
+    ];
+    // mixed number like 1½
+    if (preg_match('/^([0-9]+)\s*([½¼¾⅓⅔⅛])$/u', $s, $m)) {
+        $base = (float)$m[1]; $frac = $map[$m[2]] ?? 0.0; return $base + (float)$frac;
+    }
+    // mixed number like 1 1/2
+    if (preg_match('/^([0-9]+)\s+([0-9]+)\/([0-9]+)$/u', $s, $m)) {
+        $a=(float)$m[1]; $b=(float)$m[2]; $c=max(1.0,(float)$m[3]); return $a + ($b/$c);
+    }
+    // simple unicode fraction
+    if (preg_match('/^([½¼¾⅓⅔⅛])$/u', $s, $m)) { return (float)($map[$m[1]] ?? 0.0); }
+    // simple a/b
+    if (preg_match('/^([0-9]+)\/([0-9]+)$/u', $s, $m)) { return (float)$m[1] / max(1.0,(float)$m[2]); }
+    // plain decimal
+    if (preg_match('/^[0-9]+(?:\.[0-9]+)?$/u', $s)) { return (float)$s; }
+    return null;
+}
+}
+
 // Ingredient line parser v2 -> { qty:?float, unit:?string, item:string, note:?string, raw:string }
 function sitc_parse_ingredient_line_v2(string $raw): array {
     $raw = sitc_clean_text($raw);
+    // Additional normalization for unicode fractions and spaces
+    if (function_exists('sitc_qty_pre_normalize')) { $raw = sitc_qty_pre_normalize($raw); }
     // map unicode fractions
     $raw = strtr($raw, ['┬¢'=>' 1/2','┬╝'=>' 1/4','┬¥'=>' 3/4','Ôàô'=>' 1/3','Ôàö'=>' 2/3']);
     // Units mapping de<->en
@@ -1018,6 +1241,7 @@ function sitc_parse_instructions($input) {
         }
     } elseif (is_string($input)) {
         $parts = preg_split('/\r?\n|\.\s+(?=[A-Z├ä├û├£])/u', $input);
+        if ($parts === false) { trigger_error('Regex failed @sitc_parse_instructions preg_split', E_USER_WARNING); $parts = [$input]; }
         foreach ($parts as $p) {
             $p = trim($p);
             if ($p) $steps[] = $p;
@@ -1068,9 +1292,6 @@ function sitc_parse_ingredient_line_v3(string $raw): array {
             $u = mb_strtolower(trim($m[3] ?? ''), 'UTF-8');
             if ($u !== '') {
                 $unit = $aliases[$u] ?? $u;
-                if (!in_array($unit, ['tsp','tbsp','cup','pinch','piece','can','bunch','g','kg','ml','l','oz','lb'], true)) {
-                    $unit = null;
-                }
             }
             $rest = trim($m[4] ?? '');
             if (preg_match('/^(.*)\(([^\)]+)\)\s*$/', $rest, $n)) { $item = trim($n[1]); $note = trim($n[2]); }
@@ -1087,11 +1308,6 @@ function sitc_parse_ingredient_line_v3(string $raw): array {
             $u = mb_strtolower(trim($m[2] ?? ''), 'UTF-8');
             if ($u !== '') {
                 $unit = $aliases[$u] ?? $u;
-                if (!in_array($unit, ['tsp','tbsp','cup','pinch','piece','can','bunch','g','kg','ml','l','oz','lb'], true)) {
-                    $rest = trim($m[3] ?? '');
-                    $item = trim(($m[2] ?? '') . ' ' . $rest);
-                    return ['qty'=>$qty,'unit'=>null,'item'=>$item,'note'=>$note,'raw'=>$orig];
-                }
             }
             $rest = trim($m[3] ?? '');
             if (preg_match('/^(.*)\(([^\)]+)\)\s*$/', $rest, $n)) { $item = trim($n[1]); $note = trim($n[2]); }

@@ -38,7 +38,7 @@ function sitc_render_ingredients(array $data): string {
     <?php elseif (!$use_fallback && !empty($ingredients)) : ?>
         <h3>Zutaten</h3>
         <ul class="sitc-ingredients" data-base-servings="<?php echo esc_attr($yield_num); ?>">
-            <?php foreach ($ingredients as $ing):
+            <?php $ingredients = function_exists('sitc_merge_ingredients_for_display') ? sitc_merge_ingredients_for_display($ingredients) : $ingredients; foreach ($ingredients as $ing):
                 $qtyRaw   = (string)($ing['qty'] ?? '');
                 $unitRaw  = (string)($ing['unit'] ?? '');
                 $name     = (string)($ing['name'] ?? '');
@@ -49,12 +49,12 @@ function sitc_render_ingredients(array $data): string {
         <div id="sitc-list-<?php echo $post_id; ?>" class="sitc-grocery collapsed" hidden>
             <h4>Einkaufsliste</h4>
             <ul>
-                <?php foreach ($ingredients as $ing):
+                <?php $ingredients = function_exists('sitc_merge_ingredients_for_display') ? sitc_merge_ingredients_for_display($ingredients) : $ingredients; foreach ($ingredients as $ing):
                     $qtyRaw  = $ing['qty'] ?? '';
                     $unitRaw = $ing['unit'] ?? '';
                     $name    = $ing['name'] ?? '';
                     $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
-                    $qInfo   = sitc_parse_qty_or_range($qtyRaw);
+                    $qInfo   = function_exists('sitc_parse_qty_or_range_v2') ? sitc_parse_qty_or_range_v2($qtyRaw) : sitc_parse_qty_or_range($qtyRaw);
                     if ($qInfo['isRange']) {
                         $dispQty = sitc_format_qty_display($qInfo['low']) . '–' . sitc_format_qty_display($qInfo['high']);
                     } elseif ($qInfo['low'] !== null) {
@@ -109,13 +109,13 @@ function sitc_render_ingredients(array $data): string {
 // Centralized renderer for one ingredient li from structured fields
 function sitc_render_ingredient_li(int $post_id, string $qtyRaw, string $unitRaw, string $name): void {
     $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
-    $qInfo   = sitc_parse_qty_or_range($qtyRaw);
+    $qInfo   = function_exists('sitc_parse_qty_or_range_v2') ? sitc_parse_qty_or_range_v2($qtyRaw) : sitc_parse_qty_or_range($qtyRaw);
     if ($qInfo['isRange']) {
         $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
     } elseif ($qInfo['low'] !== null) {
         $dispQty = sitc_format_qty_display($qInfo['low']);
     } else {
-        $v = sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
+        $v = function_exists('sitc_coerce_qty_float_v2') ? sitc_coerce_qty_float_v2((string)$qtyRaw) : sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
         $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
     }
     $unitDe  = sitc_unit_to_de($unitRaw);
@@ -126,7 +126,14 @@ function sitc_render_ingredient_li(int $post_id, string $qtyRaw, string $unitRaw
             data-qty-low="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['low'])); ?>"
             data-qty-high="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['high'])); ?>"
         <?php else: ?>
-            data-qty="<?php echo esc_attr($qInfo['low'] !== null ? str_replace(',','.', (string)$qInfo['low']) : ''); ?>"
+            <?php
+                $dataQtyVal = $qInfo['low'];
+                if ($dataQtyVal === null) {
+                    $v2 = function_exists('sitc_coerce_qty_float_v2') ? sitc_coerce_qty_float_v2((string)$qtyRaw) : sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
+                    if ($v2 !== null) $dataQtyVal = (float)$v2;
+                }
+            ?>
+            data-qty="<?php echo esc_attr($dataQtyVal !== null ? str_replace(',','.', (string)$dataQtyVal) : ''); ?>"
         <?php endif; ?>
         data-unit="<?php echo esc_attr($unitDe); ?>" data-name="<?php echo esc_attr($name); ?>">
         <label for="<?php echo esc_attr($id_for); ?>">
@@ -153,6 +160,12 @@ function sitc_render_ingredient_li_from_raw(int $post_id, string $line): void {
     $note = trim((string)($p['note'] ?? ''));
     if ($note !== '') $name .= ' (' . $note . ')';
     $qtyRaw = isset($p['qty']) ? (string)$p['qty'] : '';
+    if ($qtyRaw === '' || $qtyRaw === null) {
+        if (function_exists('sitc_extract_leading_qty_token_v2')) {
+            $lead = sitc_extract_leading_qty_token_v2($raw);
+            if ($lead !== '') $qtyRaw = $lead;
+        }
+    }
     $unitRaw = isset($p['unit']) ? (string)$p['unit'] : '';
     sitc_render_ingredient_li($post_id, $qtyRaw, $unitRaw, $name);
 }

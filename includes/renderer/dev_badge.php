@@ -39,13 +39,13 @@ function sitc_render_dev_badge(array $payload, array $opts = []): string {
     ob_start();
     ?>
     <div class="sitc-dev-badge" style="font-size:.85rem;padding:.75rem;border:1px dashed #999;border-radius:6px;margin:.5rem 0;color:#333;background:#fafafa;">
-      <strong>Rendering pipeline check (first 5 items)</strong>
+      <strong>Rendering pipeline check (all items)</strong>
       <ul style="margin:.5rem 0 0 1.25rem;">
         <?php $i=0; foreach ($rawLinesDev as $line): if ($i++>=5) break; 
             $raw = (string)$line;
             $san = sitc_text_sanitize($raw);
-            $pre = sitc_qty_pre_normalize($san);
-            $qi  = sitc_parse_qty_or_range($pre);
+            $pre = function_exists('sitc_qty_pre_normalize_v2') ? sitc_qty_pre_normalize_v2($san) : sitc_qty_pre_normalize($san);
+            $qi  = function_exists('sitc_parse_qty_or_range_v2') ? sitc_parse_qty_or_range_v2($pre) : sitc_parse_qty_or_range($pre);
             $disp = '';
             if (!empty($qi['isRange']) && $qi['isRange']) { $disp = sitc_format_qty_display($qi['low']).'–'.sitc_format_qty_display($qi['high']); }
             elseif ($qi['low'] !== null) { $disp = sitc_format_qty_display($qi['low']); }

@@ -1,91 +1,12 @@
-<!-- SITC_CHANGELOG_TOP: new entries must be inserted BELOW this line -->
-
-## [0.5.41] – 2025-09-11 17:05 Europe/Berlin
-### Fixed
-- Helper-Kollision behoben: `sitc_unicode_fraction_map()` nur noch in `includes/parser_helpers.php`; Renderer bindet Parser-Helper per `require_once`.
-- Globale Helper mit `function_exists`-Guards abgesichert; doppelte Definitionen entfernt.
-### Files
-- includes/parser_helpers.php
-- includes/renderer/helpers.php
-
-## [0.5.40] – 2025-09-11 16:40 Europe/Berlin
-### Fixed
-- Parser: PCRE2-kompatible Tokenizer/Splitter; Unicode-Brüche & gemischte Zahlen stabil; Dezimal-Komma korrekt (0,50→0.5).
-### Changed
-- Einheiten-Aliase im Parser erweitert (tl/el/zehe/bund/… → kanonisch).
-### Files
-- includes/parser.php
-- includes/parser_helpers.php (neu)
-
-## [0.5.39] – 2025-09-11 13:58
-### Fixed
-- Parser: Regex-Ausdrücke PCRE2-kompatibel abgesichert (preg_split @~835/980/1187) und mit Guards versehen.
-- Guards: Regex-Fehler brechen den Parser nicht mehr ab; Diagnose im Parser-Lab via E_USER_WARNING sichtbar.
-### Files
-- includes/parser.php
-
-## [0.5.38] – 2025-09-11 13:58
-### Changed
-- Parser-Lab: Vollversion wiederhergestellt (Fixtures-Index in run.php, Diagnostics, strukturierte Tabelle, Metriken).
-### Added
-- Parser-Lab: run_diag.php als Mini-Diagnose (Upload/OpCache/Hash/mtime).
-### Files
-- tools/parser_lab/run.php
-- tools/parser_lab/run_diag.php
-
-## [0.5.37] – 2025-09-11 11:06
-### Fixed
-- Parser-Lab: „Cannot redeclare status_badge()“ behoben; zentrale Implementierung in helpers/render_table.php, run.php nutzt sie nur noch.
-### Files
-- tools/parser_lab/run.php
-- tools/parser_lab/helpers/render_table.php
-
-## [0.5.36] – 2025-09-11 09:52
-### Changed
-- Parser-Lab: Fixture-Index/Liste in `run.php` integriert (autodiscovery von fixtures/).
-### Removed
-- Parser-Lab: `index.php` entfernt.
-### Files
-- tools/parser_lab/run.php
-- tools/parser_lab/index.php
-
-## [0.5.35] – 2025-09-11 09:52
-### Removed
-- Parser-Lab: index.php entfernt (Navigation ist in run.php integriert).
-### Files
-- tools/parser_lab/index.php
-
-## [0.5.34] – 2025-09-11 09:36
-### Fixed
-- Parser-Lab: Vollständige Fehlerdiagnostik (Exceptions, PHP-Fehler, shutdown last error) + Fixture-Links direkt in run.php; kein „stiller“ Fallback mehr.
-### Files
-- tools/parser_lab/run.php
-- tools/parser_lab/lib/harness.php
-
-## [0.5.34] – 2025-09-11 09:36
-### Changed
-- CHANGELOG-Format vereinheitlicht (Datum mit Uhrzeit, Reihenfolge der Unterüberschriften, einheitliches Files-Subheading) und neuester Eintrag ergänzt.
-### Files
-- CHANGELOG.md
-
-## [0.5.33] – 2025-09-11
-### Changed
-- Parser-Lab: Diagnose erweitert (HTML-Länge, JSON-LD-Count, Parse-Dauer, Flags/Confidence, JSON-LD-Kurzsicht); nie leere Tabelle.
-### Added
-- Parser-Lab: Fixture-Index & Schnellzugriff (Butter Chicken, Ente Chop Suey, Hähnchen Biryani).
-### Files
-- tools/parser_lab/run.php
-- tools/parser_lab/lib/harness.php
-- tools/parser_lab/index.php
-
+- Blöcke: Added, Changed, Fixed, Removed.
 ## [0.5.32] - 2025-09-11
 ### Fixed
 - Parser-Lab: vollständige Fehlerdiagnostik (Exceptions/last error) statt stummem Fallback.
 ### Changed
-- Parser-Lab: .jsonld-Fixtures werden als HTML mit JSON-LD Script eingebettet; bei fehlenden strukturierten Feldern wird eine sinnvolle Fallback-Struktur erzeugt, damit die Tabelle nie leer ist.
+- Parser-Lab: .jsonld-Fixtures werden als HTML mit JSON-LD-Script eingebettet; Fallback-Struktur bei fehlenden Feldern.
 ### Files
-- tools/parser_lab/lib/harness.php
 - tools/parser_lab/run.php
+- tools/parser_lab/lib/harness.php
 
 ## [0.5.31] – 2025-09-10
 ### Fixed
@@ -153,7 +74,7 @@
 
 ## [0.5.17] - 2025-09-04
 ### Fixed
-- Bruchmengen (½, 1½, ¼) inkl. gemischter Zahlen robust geparst & skaliert; Basis-Einheiten (ml/g/l) skalierbar; DE-Format.
+- Bruchmengen (½, 1½, ⅓) inkl. gemischter Zahlen robust geparst & skaliert; Basis-Einheiten (ml/g/l) skalierbar; DE-Format.
 ### Files
 - includes/parser.php
 - includes/renderer/ingredients.php
@@ -164,7 +85,7 @@
 - Zentrale Render-Pipeline erzwungen (sanitize → pre-normalize → parse → format (DE)) in allen Renderpfaden; keine Rohstrings mehr im Frontend.
 - Dev-Diagnostik-Badge (nur Dev-Mode) zeigt Pipeline für die ersten 5 Zutatenzeilen (raw/sanitized/prenorm/parsed/display + source).
 - Refresh-Flow: Dev-Option „Force refresh“ ignoriert Locks, geparste Felder werden überschrieben; Feldquellen gespeichert und genutzt.
-- Mojibake-Quelle entschlüsselt: Sanitize-Reihenfolge auf Entities → NFC → Mojibake → Whitespace umgestellt; „Stück“ normalisiert vor dem Parsen.
+- Mojibake-Quelle entschärft: Sanitize-Reihenfolge auf Entities → NFC → Mojibake → Whitespace umgestellt; „Stück“ normalisiert vor dem Parsen.
 - DE-Einheiten und ca./Stopwörter konsolidiert; Unicode-Brüche am Zeilenanfang sicher erkannt und skaliert.
 ### Files
 - includes/renderer.php
@@ -177,7 +98,7 @@
 ## [0.5.15] - 2025-09-04
 ### Fixed
 - Globale Pipeline für Zutaten-Normalisierung (DE) durchgängig erzwungen: Sanitize → Pre-Normalize → Parse → Format (DE) → Render; keine Rohstrings mehr in der Anzeige.
-- Unicode-Brüche am Zeilenanfang (½, ¼, ¾, ⅛, ⅓, ⅔ sowie 1/2, 1 1/2, 1 /2) robust erkannt und in skalierbare Dezimalzahlen überführt.
+- Unicode-Brüche am Zeilenanfang (¼, ⅓, ½, ¾, ⅛) robust erkannt und in skalierbare Dezimalzahlen überführt.
 - Text-Sanitisierung mit HTML-Entities, UTF-8/NFC und Mojibake-Fixes.
 - Stopwörter „ca.“ u. a. (ca, circa, etwa, ungefähr, about, approx., (ca.), (ca.
 
@@ -204,7 +125,7 @@
 
 ## [0.5.13] - 2025-09-04
 ### Fixed
-- Mengen: Vor-Normalisierung (ca./circa/etwa/ungef./about/approx.), Unicode/ASCII-Brüche, Dezimal (Komma/Punkt), Bereich a-b skaliert beide Enden; Anzeige immer DE-Format (Komma), ganzzahlnahe Werte werden gerundet, ansonsten max. 2 Dezimalstellen.
+- Mengen: Vor-Normalisierung (ca./circa/etwa/ungef./about/approx.), Unicode/ASCII-Brüche, Dezimal (Komma/Punkt), Bereich a-b skaliert beide Enden; Anzeige immer DE-Format (Komma), kein Rohstring in der Ausgabe.
 ### Files
 - includes/renderer.php
 - CHANGELOG.md
@@ -252,7 +173,7 @@
 
 ## [0.5.7] - 2025-09-02
 ### Fixed
-- Mengen-Parser robust gegen Unicode- und ASCII-Brüche (½, ¼, ¾, ⅛, ⅓, ⅔ sowie 1/2, 1 1/2, 1 /2), Dezimalzahlen mit Komma/Punkt und Bereiche (2–3). Beide Bereichsenden werden korrekt skaliert und in DE-Format angezeigt.
+- Mengen-Parser robust gegen Unicode- und ASCII-Brüche (¼, ⅓, ½, ¾, ⅛ sowie 1/2, 1 1/2, 1 /2), Dezimalzahlen mit Komma/Punkt und Bereiche (2–3). Beide Bereichsenden werden korrekt skaliert und in DE-Format angezeigt.
 - Ausgabe der Mengen konsistent in deutscher Locale (Komma), ganzzahlnahe Werte werden gerundet, ansonsten max. 2 Dezimalstellen.
 - Freitext wie "Saft einer halben Zitrone" wird als 0,5 Stück Zitrone (Note "Saft") modelliert und korrekt skaliert.
 ### Changed
@@ -274,7 +195,7 @@
 ## [0.5.5] - 2025-08-29
 ### Changed
 - Ausgabe der Einheiten auf Deutsch umgestellt (EL/TL, g, kg, ml, l, …) mit Alias-Mapping; Parser kann intern weiterhin kanonische Kurzformen verwenden.
-- Zahlenformat für Mengen konsistent mit Dezimal-Komma; Brüche (½, ¼, 1 1/2) werden korrekt erkannt und skaliert.
+- Zahlenformat für Mengen konsistent mit Dezimal-Komma; Brüche (¼, ½, 1 1/2) werden korrekt erkannt und skaliert.
 ### Files
 - includes/renderer.php
 - DEV_NOTES.md
