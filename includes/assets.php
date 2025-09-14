@@ -47,3 +47,13 @@ function sitc_enqueue_frontend_assets() {
     ]);
 }
 add_action('wp_enqueue_scripts', 'sitc_enqueue_frontend_assets');
+
+// Minimaler CSS-Fallback gegen unerwünschten Top-Whitespace im Frontend (kein Admin-Bar Offset)
+add_action('wp_enqueue_scripts', function(){
+    if (is_admin()) return;
+    if (function_exists('is_admin_bar_showing') && is_admin_bar_showing()) return;
+    $css = 'html{margin-top:0!important} body{margin-top:0!important;padding-top:0!important}';
+    wp_register_style('sitc-whitespace-fix', false);
+    wp_enqueue_style('sitc-whitespace-fix');
+    wp_add_inline_style('sitc-whitespace-fix', $css);
+}, 99);

@@ -1,12 +1,86 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+// --- SITC modular includes (guarded)
+// Load lazily and safely; modules must declare(strict_types=1) at line 1, no BOM/output.
+if (!function_exists('sitc_ing_tokenize'))     { @require_once __DIR__ . '/ingredients/tokenize.php'; }
+if (!function_exists('sitc_ing_detect_qty'))   { @require_once __DIR__ . '/ingredients/qty.php'; }
+if (!function_exists('sitc_ing_detect_unit'))  { @require_once __DIR__ . '/ingredients/unit.php'; }
+if (!function_exists('sitc_ing_extract_item_note')) { @require_once __DIR__ . '/ingredients/note.php'; }
+if (!function_exists('sitc_ing_parse_line_mod')) { @require_once __DIR__ . '/ingredients/parse_line.php'; }
+
 // Load parser helpers (PCRE2-safe tokenizer, qty parsing, unit aliases)
 // Keep renderer untouched; helpers are parser-internal only.
 $__sitc_helpers = __DIR__ . '/parser_helpers.php';
 if (is_file($__sitc_helpers)) {
     require_once $__sitc_helpers;
 }
+// Ingredients adapter (E1) — loaded for modular path behind feature flag
+$__sitc_ing_adapter = __DIR__ . '/ingredients/parse_line.php';
+if (is_file($__sitc_ing_adapter)) {
+    require_once $__sitc_ing_adapter;
+}
+
+// Request-scoped engine selector for ingredients
+if (!isset($GLOBALS['SITC_ING_ENGINE'])) { $GLOBALS['SITC_ING_ENGINE'] = 'auto'; }
+if (!function_exists('sitc_set_ing_engine')) {
+function sitc_set_ing_engine(string $engine): void {
+    $allowed = ['legacy','mod','auto'];
+    $GLOBALS['SITC_ING_ENGINE'] = in_array($engine, $allowed, true) ? $engine : 'auto';
+}
+}
+
+// Read current engine; resolves 'auto' using SITC_ING_V2
+if (!function_exists('sitc_get_ing_engine')) {
+function sitc_get_ing_engine(): string {
+    $engine = function_exists('sitc_get_ing_engine') ? sitc_get_ing_engine() : ($GLOBALS['SITC_ING_ENGINE'] ?? 'auto');
+    if ($engine === 'auto') {
+        $useV2 = (defined('SITC_ING_V2') && SITC_ING_V2 === true);
+        return $useV2 ? 'mod' : 'legacy';
+    }
+    return in_array($engine, ['legacy','mod'], true) ? $engine : 'legacy';
+}
+}
+
+// Legacy adapter: return modern shape using existing helpers when available
+if (!function_exists('sitc_parse_ingredient_line_legacy')) {
+function sitc_parse_ingredient_line_legacy(string $raw, string $locale='de'): array {
+    $orig = (string)$raw;
+    $s = trim((string)$orig);
+    if ($s === '') return ['raw'=>'','qty'=>null,'unit'=>null,'item'=>'','note'=>null];
+    // Try legacy helper-based normalization if available
+    $qty = null;
+    if (function_exists('sitc_qty_parse_range')) { $qr = sitc_qty_parse_range($s); if ($qr) $qty = $qr; }
+    if ($qty === null && function_exists('sitc_qty_normalize')) { $v = sitc_qty_normalize($s); if ($v !== null) $qty = $v; }
+    $unit = null; $item = $s; $note = null;
+    // Minimal split: if starts with qty token then try extract unit+item via helper
+    if (preg_match('/^\s*(\S+)\s+(.*)$/u', $s, $m)) {
+        $head = $m[1]; $rest = trim((string)$m[2]);
+        if ($qty !== null && function_exists('sitc_extract_unit_item_note')) {
+            $e = sitc_extract_unit_item_note($rest);
+            $unit = $e['unit']; $item = $e['item']; $note = $e['note'];
+        }
+    }
+    return [ 'raw'=>$orig, 'qty'=>$qty, 'unit'=>($unit!==''?$unit:null), 'item'=>trim((string)$item), 'note'=>($note!==''?$note:null) ];
+}
+}
+
+// Modular adapter provided by includes/ingredients/parse_line.php
+
+// Mux: choose legacy vs. modular ingredient parser based on feature flag
+if (!function_exists('sitc_ing_parse_line_mux')) {
+function sitc_ing_parse_line_mux(string $line, string $locale = 'de'): ?array {
+    $raw = (string)$line;
+    $engine = $GLOBALS['SITC_ING_ENGINE'] ?? 'auto';
+    if ($engine === 'legacy') return (array)sitc_parse_ingredient_line_legacy($raw, $locale);
+    if ($engine === 'mod')    return (array)sitc_ing_parse_line_mod($raw, $locale);
+    // auto → follow feature flag default
+    $useV2 = (defined('SITC_ING_V2') && SITC_ING_V2 === true);
+    return $useV2 ? (array)sitc_ing_parse_line_mod($raw, $locale) : (array)sitc_parse_ingredient_line_legacy($raw, $locale);
+}
+}
+
+// Duplicate legacy adapter removed (single definition with locale parameter kept above)
 
 /**
  * Parser: Extrahiert Rezeptdaten aus einer URL (JSON-LD bevorzugt, Fallback HTML).
@@ -63,7 +137,7 @@ function sitc_parse_recipe_from_url($url) {
                 // Zutaten
                 if (!empty($json['recipeIngredient'])) {
                     foreach ((array)$json['recipeIngredient'] as $raw) {
-                        $parsed = sitc_parse_ingredient_line($raw);
+                        $parsed = sitc_ing_parse_line_mux((string)$raw);
                         if ($parsed) $recipe['ingredients_struct'][] = $parsed;
                     }
                 }
@@ -85,7 +159,7 @@ function sitc_parse_recipe_from_url($url) {
     if (preg_match_all('/<li[^>]*>(.*?)<\/li>/is', $html, $matches)) {
         foreach ($matches[1] as $line) {
             $clean = wp_strip_all_tags($line);
-            $parsed = sitc_parse_ingredient_line($clean);
+            $parsed = sitc_ing_parse_line_mux($clean);
             if ($parsed) $recipe['ingredients_struct'][] = $parsed;
         }
     }
@@ -203,7 +277,7 @@ function sitc_parse_recipe_from_url_v2(string $url) {
         }
     } elseif (!empty($r['recipeIngredient']) && is_array($r['recipeIngredient'])) {
         foreach ($r['recipeIngredient'] as $raw) {
-            $parsed = sitc_parse_ingredient_line((string)$raw);
+            $parsed = sitc_ing_parse_line_mux((string)$raw);
             if ($parsed) $ingredients_struct[] = $parsed;
         }
     }
@@ -510,6 +584,16 @@ function sitc_extract_dom_fallback(DOMDocument $doc, array $scopeSelectors, arra
                 }
             }
         }
+        // HOTFIX A: If we detected container nodes, prefer itemized <li> entries under root
+        $listContainers = (new DOMXPath($doc))->query('.//ul|.//ol', $root);
+        if ($listContainers && $listContainers->length > 0) {
+            $tmp = [];
+            foreach ((new DOMXPath($doc))->query('.//li', $root) as $li) {
+                $t = trim(preg_replace('/\s+/', ' ', $li->textContent ?? ''));
+                if ($t && !preg_match('/(zutaten|ingredients)/i', $t)) $tmp[] = $t;
+            }
+            if ($tmp) { $ings = $tmp; $groups = []; $currentGroup = null; }
+        }
     } else {
         // Generic list items inside root
         foreach ((new DOMXPath($doc))->query('.//li', $root) as $li) {
@@ -631,16 +715,35 @@ function sitc_normalize_recipe(array $recipe, DOMDocument $doc, ?string $pageUrl
     }
     $struct = [];
     foreach ($ingInput as $entry) {
-        if (is_array($entry) && (isset($entry['raw']) || isset($entry['item']))) {
-            // already structured from source
-            $raw = isset($entry['raw']) ? (string)$entry['raw'] : trim((string)($entry['item'] ?? ''));
-            $out = sitc_struct_from_line($raw);
-            foreach ($out as $s) $struct[] = $s;
+        $one = null;
+        if (is_array($entry)) {
+            // If structured fields present, map directly without re-parsing
+            if (isset($entry['qty']) || isset($entry['unit']) || isset($entry['item']) || isset($entry['name']) || isset($entry['note'])) {
+                $qty  = $entry['qty']  ?? null;
+                $unit = isset($entry['unit']) ? (string)$entry['unit'] : null;
+                if ($unit && function_exists('sitc_unit_alias_canonical')) {
+                    $canon = sitc_unit_alias_canonical($unit);
+                    $unit = $canon ?: $unit;
+                }
+                $item = isset($entry['item']) ? (string)$entry['item'] : (string)($entry['name'] ?? '');
+                $note = isset($entry['note']) ? (string)$entry['note'] : null;
+                $raw  = isset($entry['raw']) ? (string)$entry['raw'] : trim(((is_array($qty)||$qty!==null)?((is_array($qty)?(($qty['low']??'').'-'.($qty['high']??'')):(string)$qty)).' ':'') . ($unit?($unit.' '):'') . $item);
+                $one = ['raw'=>$raw, 'qty'=>$qty, 'unit'=>$unit, 'item'=>$item, 'note'=>($note!==''?$note:null)];
+            } elseif (isset($entry['raw'])) {
+                // Array holding only raw -> treat as string via MUX
+                $rawLine = sitc_clean_text((string)$entry['raw']);
+                $one = function_exists('sitc_ing_parse_line_mux') ? sitc_ing_parse_line_mux($rawLine, 'de') : null;
+            } else {
+                // Fallback: stringify and try MUX
+                $rawLine = sitc_clean_text((string)json_encode($entry));
+                $one = function_exists('sitc_ing_parse_line_mux') ? sitc_ing_parse_line_mux($rawLine, 'de') : null;
+            }
         } else {
-            $raw = sitc_clean_text((string)$entry);
-            if ($raw === '') continue;
-            foreach (sitc_struct_from_line($raw) as $s) $struct[] = $s;
+            // String or scalar -> MUX
+            $rawLine = sitc_clean_text((string)$entry);
+            $one = function_exists('sitc_ing_parse_line_mux') ? sitc_ing_parse_line_mux($rawLine, 'de') : null;
         }
+        if (is_array($one)) $struct[] = $one;
     }
     // De-Dupe on display-like key: qty (single or low-high) + unit + item (canon)
     $seen = [];
@@ -1207,6 +1310,7 @@ function sitc_parse_yield_number($raw) {
 /**
  * Zutatenzeile parsen ÔåÆ [qty, unit, name]
  */
+if (!function_exists('sitc_parse_ingredient_line')) {
 function sitc_parse_ingredient_line($raw) {
     $raw = trim(preg_replace('/\s+/', ' ', (string)$raw));
     if ($raw === '') return null;
@@ -1223,6 +1327,7 @@ function sitc_parse_ingredient_line($raw) {
         'unit' => '',
         'name' => $raw
     ];
+}
 }
 
 /**

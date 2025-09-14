@@ -1,5 +1,181 @@
 <!-- SITC_CHANGELOG_TOP: new entries must be inserted BELOW this line -->
 
+## [+ 0.0.1] [WIP]
+### Fixed
+- Frontend-Whitespace oberhalb des Inhalts eliminiert – Admin-Code strikt auf `is_admin()` begrenzt, Frontend-Output-Guard eingeführt, BOM/Whitespace-Risiken beseitigt; optionaler CSS-Fallback.
+### Files
+- skipintro-recipe-crawler.php
+- includes/settings.php
+- includes/assets.php
+- includes/refresh.php
+- tools/dev/scan_bom.php (Dev)
+
+## [+ 0.0.1] [WIP]
+### Fixed
+- Parser-Lab: diag_box() akzeptiert nun Strings und Arrays; verhindert TypeError.
+### Files
+- tools/parser_lab/run.php
+• Fixed: Modular-Pipeline lädt verlässlich (includes + MUX an allen Call-Sites); Parser-Lab Smoke-Test bei Engine=mod.
+• Files: includes/parser.php; includes/settings.php; tools/parser_lab/run.php
+### Added
+- Modular-Parser – Qty/Unit/Notes-Erkennung (Brüche, gemischte Zahlen, Ranges, Bund/Zehe/EL/TL, TK/Klammern/Suffix), verbessert Dezimal-Komma im Parsing.
+- Parser-Lab dev-dump (qty/unit/item/note) sichtbar nur bei Engine=mod.
+### Changed
+- Parser-Lab nutzt Engine=mod für Tests; Prod-Flag bleibt OFF.
+### Files
+- includes/ingredients/tokenize.php
+- includes/ingredients/qty.php
+- includes/ingredients/unit.php
+- includes/ingredients/note.php
+- includes/ingredients/parse_line.php
+- includes/parser.php (MUX only)
+- tools/parser_lab/run.php (Badge/Toggle unverändert, dev-dump)
+
+## [+ 0.0.1] [WIP]
+### Added
+- Web-Auto-Eval (Legacy vs. Modular) unter `tools/parser_lab/auto_eval_web.php`.
+### Changed
+- Parser-Lab `run.php` mit Engine-Toggle (`?engine=legacy|mod|auto`), Badge und Vergleichslinks.
+### Note
+- `SITC_ING_V2` bleibt OFF, Modular nur für Tests.
+### Files
+- includes/settings.php
+- includes/parser.php
+- tools/parser_lab/run.php
+- tools/parser_lab/auto_eval_web.php
+- tools/parser_lab/out/.htaccess
+
+## [0.5.55] - 2025-09-12 16:52
+### Changed/Fixed
+- Parser harmonisiert Zutaten-Ausgabe auf `{raw,qty,unit,item,note}`; robuste Mengen-Erkennung (Unicode-/ASCII-Brüche, gemischte Zahlen, Bereiche, Dezimalkomma); Legacy `{qty,unit,name}` wird sauber adaptiert.
+### Files
+- includes/parser.php
+- includes/parser_helpers.php
+- includes/ingredients/parse_line.php
+
+## [0.5.54] - 2025-09-12 16:35
+### Fixed
+- strict_types-Deklaration korrigiert – in `includes/ingredients/parse_line.php` an den Dateianfang verschoben (ohne Kommentare/Whitespace davor); Projektweit geprüft (`includes/`, `tools/`): keine weiteren Verstöße gefunden; Dateien als UTF-8 ohne BOM gespeichert.
+### Files
+- includes/ingredients/parse_line.php
+
+## [0.5.53] – 2025-09-12 15:20
+### Hotfix
+- Zutaten-Schema {raw, qty, unit, item, note} konsolidiert; Vor-Normalisierung (ca., Brüche, Dashes, Dezimal) vor Tokenizing; Range/Mixed/Fraction stabil.
+### Files
+- includes/ingredients/parse_line.php
+- includes/ingredients/tokenize.php
+- includes/ingredients/qty.php
+- includes/ingredients/note.php
+- includes/parser_helpers.php
+- includes/parser.php
+
+## [0.5.52] – 2025-09-12 15:05
+### Refactor
+- Modul-Skelett für Ingredient-Parser eingeführt (tokenize/qty/unit/note) und `sitc_parse_ingredient_line(...)` darauf verkabelt. Keine Verhaltensänderung.
+### Files
+- includes/ingredients/parse_line.php
+- includes/ingredients/tokenize.php
+- includes/ingredients/qty.php
+- includes/ingredients/unit.php
+- includes/ingredients/note.php
+- includes/parser.php
+
+## [0.5.51] – 2025-09-12 14:45
+### Fixed
+- Parser: Brüche (½/1/2/1 1/2), Ranges (2–3/2-3), Unit-aus-Item (…zehen→clove) und Note-Suffixe ("-Stück", "TK …, …") robust im Adapter `sitc_parse_ingredient_line`; Parser-Lab-Fälle grün.
+### Files
+- includes/ingredients/parse_line.php
+- includes/parser_helpers.php
+- includes/parser.php
+
+## [0.5.50] – 2025-09-12 14:30
+### Chore
+- Altdateien ins Archiv verschoben; Parser-/Renderer-Helper klar getrennt (keine Funktionsänderungen), Präfixe zur weiteren Konsolidierung vorbereitet.
+### Files
+- tools/archive/** (neu)
+- tools/parser_lab/run.php
+- includes/parser_helpers.php
+- includes/renderer/helpers.php
+
+### Refactor
+- Ingredients-Adapter eingeführt: `sitc_parse_ingredient_line($line, 'de')`; Parser ruft den Adapter statt Inline-Heuristiken. Verhalten unverändert.
+### Files
+- includes/ingredients/parse_line.php (neu)
+- includes/parser.php
+
+## [0.5.49] – 2025-09-12 14:20
+### Fixed
+- Mengenparser: Unicode-/ASCII-Brüche und gemischte Zahlen („1½“/„1 1/2“) sowie Leading-Decimals („.50/0,50“) robust normalisiert; Ranges unverändert korrekt.
+- Units: Alias ergänzt/robust genutzt (bund→bunch, stück→piece); Heuristiken für „Knoblauchzehen“ (→ clove) und „Ingwer-Stück“ (→ note „Stück“).
+- Item-Bereinigung: konsumierten Mengen-/Einheiten-Präfix zuverlässig entfernt, kein doppelter Präfix im Item.
+### Files
+- includes/parser_helpers.php
+- includes/parser.php
+
+## [0.5.48] – 2025-09-12 13:55
+### Added
+- Parser-Lab: Auto-Evaluation (`?eval=1`) für Kernfälle (Fractions, Mixed Numbers, Ranges, Leading Decimals, Notes, Units) auf 4 Referenz-Fixtures; kompakte PASS/FAIL-Zusammenfassung inkl. Deep-Dive Details.
+### Files
+- tools/parser_lab/run.php
+
+## [0.5.47] – 2025-09-12 13:40
+### Fixed
+- Parser (DOM): Zutaten aus <li> itemisiert; kein zusammengefügter Container-Text mehr.
+- Parser (Pre-Normalize): Unicode/ASCII-Brüche, Mixed Numbers, Ranges und führende Dezimalpunkte robust (Reihenfolge vor Qty-Parse eingehalten).
+### Changed
+- Parser (Post-Parse): konsumierten Mengen-Präfix zuverlässig aus Resttext entfernt (keine doppelte Menge im item).
+### Files
+- includes/parser.php
+- includes/parser_helpers.php
+
+## [0.5.46] – 2025-09-12 13:05
+### Fixed
+- Parser: Nach Qty/Range robuste Extraktion von Unit/Item/Note (keine Multi-Splits; nichts verschluckt).
+- Parser: D-FIX-Flow beibehalten (Ranges „a–b/ bis“, ASCII-/Unicode-Brüche, „.50/0,50“).
+### Files
+- includes/parser.php
+- includes/parser_helpers.php
+
+## [0.5.45] – 2025-09-12 12:10
+### Fixed
+- Parser: Range-Handling („a–b“/„bis“) vor Segmentierung; keine Reduktion auf Einzelwerte.
+- Parser: ASCII-/Unicode-Brüche und gemischte Zahlen („1/2“, „1 1/2“, „½“) robust; Dezimal-Komma („0,50“) und führende Dezimal („.50“) normalisiert.
+- Parser: Multi-Qty-Splitting pro Zeile deaktiviert; eine Zutatenzeile ergibt genau einen Struct-Eintrag.
+### Files
+- includes/parser.php
+- includes/parser_helpers.php
+
+## [0.5.44] – 2025-09-12 10:30
+### Fixed
+- Parser: ASCII-Brüche (1/2, 3/4, 1 1/2) sicher als Mengen erkannt; keine Verwechslung mit Bereichen.
+- Parser: Bereiche mit Gedankenstrich bzw. „bis“ als {low,high} erhalten; keine Reduktion.
+- Parser: Dezimal-Komma im Zahlkontext und führende Null („.50“ → „0.50“) normalisiert; Slash bleibt für Brüche erhalten.
+- Lab: Qty-Ranges formatiert als „low–high“; „display (einfach)“ ergänzt optional „, note“.
+### Files
+- includes/parser_helpers.php
+- tools/parser_lab/run.php
+
+## [0.5.43] – 2025-09-12 09:04
+### Fixed
+- Brüche & gemischte Zahlen (¼, ½, ¾, 1/2, 1 1/2) robust geparst (keine Fehldeutung „1/2“→„2“).
+- Bereiche (2–3) als Range erhalten (Anzeige in Parser-Lab „low–high“).
+- Dezimal-Komma & führende Null normalisiert („0,50“→0.5, „.50“→„0.50“).
+### Files
+- includes/parser_helpers.php
+- tools/parser_lab/run.php
+
+## [0.5.42] – 2025-09-11  09:04
+### Fixed
+- Parser: Zähl-Einheit „Stück“ korrekt erkannt (0,5 Stück Zitrone → qty 0.5, unit piece, item Zitrone, note Saft).
+- Parser: Hyphen-Notiz bei Gewichten („Ingwer-Stück“) → item=Ingwer, note=Stück (unit bleibt g).
+- Parser: Notizen aus Klammern/Komma beibehalten (z. B. „, gehackt“).
+- Parser: „ca.“/Stopwörter vor/nach Mengentoken entfernt; Dezimal-Komma in numerischen Tokens berücksichtigt.
+- Parser: Geister-Segmente mit reiner Zahl (z. B. „1“) verworfen.
+### Files
+- includes/parser.php
+- includes/parser_helpers.php
+
 ## [0.5.41] – 2025-09-11 17:05 Europe/Berlin
 ### Fixed
 - Helper-Kollision behoben: `sitc_unicode_fraction_map()` nur noch in `includes/parser_helpers.php`; Renderer bindet Parser-Helper per `require_once`.

@@ -464,5 +464,3 @@ function sitc_store_admin_notice(string $type, string $message, string $details_
         'details' => $details_html,
     ], 60);
 }
-
-?>
