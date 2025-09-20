@@ -2,8 +2,6 @@
 // Dev utility: scan plugin tree for UTF-8 BOM or leading whitespace before opening tag and for closing PHP tags at EOF.
 // Run from CLI or via browser in a safe dev environment. Do NOT load in production.
 
-declare(strict_types=1);
-
 header('Content-Type: text/plain; charset=utf-8');
 
 $root = dirname(__DIR__, 1);

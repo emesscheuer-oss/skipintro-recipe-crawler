@@ -1,8 +1,7 @@
 <?php
-declare(strict_types=1);
 
 /**
- * Parser-Lab (Browser, WP-bootstrapped) – zeigt Fixtures und jagt sie durch den Parser.
+ * Parser-Lab (Browser, WP-bootstrapped) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ zeigt Fixtures und jagt sie durch den Parser.
  * Aufruf:
  *   .../wp-content/plugins/skipintro-recipe-crawler/tools/parser_lab/run.php
  *   .../wp-content/plugins/skipintro-recipe-crawler/tools/parser_lab/run.php?f=fixtures/butter_chicken.jsonld
@@ -26,7 +25,7 @@ $wpContent  = dirname($pluginRoot, 1);                // .../wp-content
 $siteRoot   = dirname($wpContent, 1);                 // WP Root (vermutlich)
 $wpLoad     = null;
 
-// Kandidaten für wp-load.php testen (verschiedene Hosting-Layouts abdecken)
+// Kandidaten fÃƒÆ’Ã‚Â¼r wp-load.php testen (verschiedene Hosting-Layouts abdecken)
 $candidates = [
     $siteRoot . '/wp-load.php',
     dirname($pluginRoot, 2) . '/wp-load.php',         // falls pluginRoot abweicht
@@ -35,6 +34,8 @@ $candidates = [
 foreach ($candidates as $cand) {
     if ($cand && is_file($cand)) { $wpLoad = $cand; break; }
 }
+
+require_once __DIR__ . '/_ui_helpers.php';
 
 safe_html_head('Parser-Lab');
 
@@ -48,14 +49,14 @@ $diag = [
     'script'      => __FILE__,
 ];
 
-// WordPress bootstrappen (für Parser & Helfer)
+// WordPress bootstrappen (fÃƒÆ’Ã‚Â¼r Parser & Helfer)
 try {
     if (!$wpLoad || !is_file($wpLoad)) {
-        throw new RuntimeException('wp-load.php nicht gefunden – bitte Pfade prüfen.');
+        throw new RuntimeException('wp-load.php nicht gefunden ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ bitte Pfade prÃƒÆ’Ã‚Â¼fen.');
     }
     require_once $wpLoad;
 } catch (Throwable $e) {
-    echo err_box('WP-Bootstrap-Fehler: ' . safe($e->getMessage()));
+    sitc_error('WP-Bootstrap-Fehler: ' . $e->getMessage());
     echo diag_box($diag);
     safe_html_end();
     exit;
@@ -75,11 +76,11 @@ if ($engine !== '' && function_exists('sitc_set_ing_engine')) {
 $activeEngine = isset($GLOBALS['SITC_ING_ENGINE']) ? (string)$GLOBALS['SITC_ING_ENGINE'] : 'auto';
 $isModActive = ($activeEngine === 'mod');
 
-// Prüfen, ob parseRecipe existiert (oder der Wrapper)
+// PrÃƒÆ’Ã‚Â¼fen, ob parseRecipe existiert (oder der Wrapper)
 $haveParse = function_exists('parseRecipe');
 $diag['have_parseRecipe'] = $haveParse ? 'yes' : 'no';
 
-// Übersicht oder Detail?
+// ÃƒÆ’Ã…â€œbersicht oder Detail?
 $fixtureRel = isset($_GET['f']) ? (string)$_GET['f'] : '';
 $doEval     = isset($_GET['eval']) && $_GET['eval'] === '1';
 
@@ -97,11 +98,11 @@ try {
     // DEV Smoke-Test: only when engine=mod selected explicitly
     if ($isModActive) {
         $__smoke = [
-            '½ Bund Koriander, gehackt',
+            'Ãƒâ€šÃ‚Â½ Bund Koriander, gehackt',
             '1/2 Zwiebel',
-            '1 1/2 TL Kreuzkümmel',
-            '2–3 Nelken',
-            '0,50 Stück Zitrone (Saft)'
+            '1 1/2 TL KreuzkÃƒÆ’Ã‚Â¼mmel',
+            '2ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“3 Nelken',
+            '0,50 StÃƒÆ’Ã‚Â¼ck Zitrone (Saft)'
         ];
         $rows = [];
         $anyDiagNotLoaded = false; $allQtyNull = true;
@@ -113,7 +114,7 @@ try {
             if ($qty !== null && $qty !== '') { $allQtyNull = false; }
             $qtyStr = '';
             if (is_array($qty) && isset($qty['low'],$qty['high'])) {
-                $qtyStr = rtrim(rtrim(sprintf('%.3f', (float)$qty['low']), '0'), '.') . '–' . rtrim(rtrim(sprintf('%.3f', (float)$qty['high']), '0'), '.');
+                $qtyStr = rtrim(rtrim(sprintf('%.3f', (float)$qty['low']), '0'), '.') . 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“' . rtrim(rtrim(sprintf('%.3f', (float)$qty['high']), '0'), '.');
             } elseif ($qty !== null && $qty !== '') {
                 $qtyStr = rtrim(rtrim(sprintf('%.3f', (float)$qty), '0'), '.');
             }
@@ -130,12 +131,12 @@ try {
             $line = $__smoke[$i];
             $disp = trim(implode(' ', array_filter([$rr['qty'], $rr['unit'], $rr['item']], 'strlen')));
             if ($rr['note'] !== '') { $disp .= ', ' . $rr['note']; }
-            echo '<li><code>' . safe($line) . '</code> → <strong>' . safe($disp) . '</strong></li>';
+            echo '<li><code>' . safe($line) . '</code> ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ <strong>' . safe($disp) . '</strong></li>';
         }
         echo '</ul></div>';
         if ($anyDiagNotLoaded || $allQtyNull) {
-            echo '<div class="box err"><strong>Modular-Pipeline nicht geladen</strong> — tokenize/qty/unit/note fehlen. '
-               . 'Bitte <code>includes/parser.php</code>-Includes prüfen.</div>';
+            echo '<div class="box err"><strong>Modular-Pipeline nicht geladen</strong> ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â tokenize/qty/unit/note fehlen. '
+               . 'Bitte <code>includes/parser.php</code>-Includes prÃƒÆ’Ã‚Â¼fen.</div>';
         }
     }
 
@@ -147,7 +148,7 @@ try {
         $norm_str = function(string $s): string {
             $s = mb_strtolower(trim($s), 'UTF-8');
             $s = preg_replace('/\s+/', ' ', $s);
-            $from = ['ä','ö','ü','ß','á','à','â','é','è','ê','í','ì','î','ó','ò','ô','ú','ù','û'];
+            $from = ['ÃƒÆ’Ã‚Â¤','ÃƒÆ’Ã‚Â¶','ÃƒÆ’Ã‚Â¼','ÃƒÆ’Ã…Â¸','ÃƒÆ’Ã‚Â¡','ÃƒÆ’Ã‚Â ','ÃƒÆ’Ã‚Â¢','ÃƒÆ’Ã‚Â©','ÃƒÆ’Ã‚Â¨','ÃƒÆ’Ã‚Âª','ÃƒÆ’Ã‚Â­','ÃƒÆ’Ã‚Â¬','ÃƒÆ’Ã‚Â®','ÃƒÆ’Ã‚Â³','ÃƒÆ’Ã‚Â²','ÃƒÆ’Ã‚Â´','ÃƒÆ’Ã‚Âº','ÃƒÆ’Ã‚Â¹','ÃƒÆ’Ã‚Â»'];
             $to   = ['a','o','u','ss','a','a','a','e','e','e','i','i','i','o','o','o','u','u','u'];
             return str_replace($from, $to, $s);
         };
@@ -181,11 +182,11 @@ try {
                 ['qty'=>30,  'unit'=>['ml'], 'item'=>'wasser'],
             ],
             'tools/parser_lab/fixtures/butter_chicken.jsonld' => [
-                ['qty'=>0.5, 'unit'=>['piece','stück'], 'item'=>'zitrone', 'note_has'=>['saft'], 'item_not_has'=>['.50','0,50','0.50']],
+                ['qty'=>0.5, 'unit'=>['piece','stÃƒÆ’Ã‚Â¼ck'], 'item'=>'zitrone', 'note_has'=>['saft'], 'item_not_has'=>['.50','0,50','0.50']],
                 ['qty'=>4,   'unit'=>['clove','zehe','zehen'], 'item'=>'knoblauch'],
-                ['qty'=>60,  'unit'=>['ml'], 'item'=>'öl'],
-                ['qty'=>15,  'unit'=>['g'], 'item'=>'ingwer', 'note_has'=>['stück']],
-                ['qty'=>250, 'unit'=>['g'], 'item'=>'hähnchenbrust'],
+                ['qty'=>60,  'unit'=>['ml'], 'item'=>'ÃƒÆ’Ã‚Â¶l'],
+                ['qty'=>15,  'unit'=>['g'], 'item'=>'ingwer', 'note_has'=>['stÃƒÆ’Ã‚Â¼ck']],
+                ['qty'=>250, 'unit'=>['g'], 'item'=>'hÃƒÆ’Ã‚Â¤hnchenbrust'],
                 ['qty'=>1.5, 'unit'=>['tbsp','el'], 'item'=>'joghurt'],
                 ['qty'=>1.5, 'unit'=>['tsp','tl'], 'item'=>'garam masala'],
             ],
@@ -265,17 +266,17 @@ try {
         exit;
     }
     if ($fixtureRel === '') {
-        echo h1('Parser-Lab – Fixtures');
+        echo h1('Parser-Lab ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Fixtures');
         echo diag_box($diag);
         echo fixtures_list($pluginRoot);
         safe_html_end();
         exit;
     }
 
-    // Fixture auflösen & lesen
+    // Fixture auflÃƒÆ’Ã‚Â¶sen & lesen
     $fixtureAbs = realpath($pluginRoot . '/' . ltrim($fixtureRel, '/'));
     if (!$fixtureAbs || strpos($fixtureAbs, realpath(FIXTURE_DIR)) !== 0 || !is_file($fixtureAbs)) {
-        throw new RuntimeException('Ungültige Fixture: ' . safe($fixtureRel));
+        throw new RuntimeException('UngÃƒÆ’Ã‚Â¼ltige Fixture: ' . safe($fixtureRel));
     }
 
     $ext = strtolower(pathinfo($fixtureAbs, PATHINFO_EXTENSION));
@@ -284,22 +285,22 @@ try {
         throw new RuntimeException('Konnte Fixture nicht lesen: ' . safe($fixtureRel));
     }
 
-    // JSON/JSON-LD in HTML-Hülle verpacken, damit <script type=application/ld+json> gefunden wird
+    // JSON/JSON-LD in HTML-HÃƒÆ’Ã‚Â¼lle verpacken, damit <script type=application/ld+json> gefunden wird
     if (in_array($ext, ['json', 'jsonld'], true)) {
         $html = "<!doctype html><meta charset='utf-8'>\n<script type=\"application/ld+json\">" . $raw . "</script>";
     } else {
         $html = $raw;
     }
 
-    echo h1('Parser-Lab – ' . safe($fixtureRel));
-    echo '<p><a href="' . safe(self_url(['f' => null])) . '">← Zur Übersicht</a></p>';
+    echo h1('Parser-Lab ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ ' . safe($fixtureRel));
+    echo '<p><a href="' . safe(self_url(['f' => null])) . '">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Zur ÃƒÆ’Ã…â€œbersicht</a></p>';
     echo diag_box($diag + [
         'fixture' => $fixtureRel,
         'ext'     => $ext,
     ]);
 
     if (!$haveParse) {
-        throw new RuntimeException('Funktion parseRecipe(...) nicht gefunden. Bitte includes/parser.php prüfen.');
+        throw new RuntimeException('Funktion parseRecipe(...) nicht gefunden. Bitte includes/parser.php prÃƒÆ’Ã‚Â¼fen.');
     }
 
     // Parser aufrufen
@@ -349,7 +350,7 @@ try {
             $qty  = $row['qty']  ?? '';
             $qtyStr = '';
             if (is_array($qty) && isset($qty['low'],$qty['high'])) {
-                $qtyStr = rtrim(rtrim(sprintf('%.3f', (float)$qty['low']), '0'), '.') . '–' . rtrim(rtrim(sprintf('%.3f', (float)$qty['high']), '0'), '.');
+                $qtyStr = rtrim(rtrim(sprintf('%.3f', (float)$qty['low']), '0'), '.') . 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“' . rtrim(rtrim(sprintf('%.3f', (float)$qty['high']), '0'), '.');
             } elseif ($qty !== null && $qty !== '') {
                 $qtyStr = rtrim(rtrim(sprintf('%.3f', (float)$qty), '0'), '.');
             }
@@ -366,7 +367,7 @@ try {
                . '<td><strong>' . safe($disp) . '</strong></td>'
                . '</tr>';
             if ($isModActive) {
-                $dumpQty = '—';
+                $dumpQty = 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
                 if (is_array($qty) && isset($qty['low'],$qty['high'])) {
                     $dumpQty = '{low:'
                         . rtrim(rtrim(sprintf('%.3f', (float)$qty['low']), '0'), '.')
@@ -376,9 +377,9 @@ try {
                 } elseif ($qty !== null && $qty !== '') {
                     $dumpQty = rtrim(rtrim(sprintf('%.3f', (float)$qty), '0'), '.');
                 }
-                $dumpUnit = ($unit !== null && $unit !== '') ? (string)$unit : '—';
-                $dumpItem = ($item !== null && $item !== '') ? (string)$item : '—';
-                $dumpNote = ($note !== null && $note !== '') ? (string)$note : '—';
+                $dumpUnit = ($unit !== null && $unit !== '') ? (string)$unit : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
+                $dumpItem = ($item !== null && $item !== '') ? (string)$item : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
+                $dumpNote = ($note !== null && $note !== '') ? (string)$note : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
                 echo '<tr><td colspan="6"><div class="dev-dump">dev: qty='
                     . safe($dumpQty) . ', unit=' . safe($dumpUnit)
                     . ', item=' . safe($dumpItem) . ', note=' . safe($dumpNote)
@@ -388,7 +389,7 @@ try {
             $raw = (string)$row;
             echo '<tr><td>' . $i . '</td>'
                . '<td><code>raw</code><br><small>' . safe($raw) . '</small></td>'
-               . '<td>—</td><td>—</td><td>—</td>'
+               . '<td>ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</td><td>ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</td><td>ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</td>'
                . '<td><strong>' . safe($raw) . '</strong></td>'
                . '</tr>';
         }
@@ -396,7 +397,7 @@ try {
     echo '</tbody></table>';
 
 } catch (Throwable $e) {
-    echo err_box($e->getMessage());
+    sitc_error($e->getMessage());
     echo diag_box($diag);
 }
 
@@ -433,14 +434,6 @@ function safe_html_head(string $title): void {
     echo "<!doctype html><meta charset='utf-8'><title>" . safe($title) . "</title>" . styles();
 }
 function safe_html_end(): void { /* noop */ }
-function err_box($msg): string {
-    if (is_array($msg) || is_object($msg)) {
-        $msg = json_encode($msg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    } else {
-        $msg = (string)$msg;
-    }
-    return '<div class="box err"><strong>Fehler:</strong> ' . safe($msg) . '</div>';
-}
 function warn_box($msg): string {
     if (is_array($msg) || is_object($msg)) {
         $msg = json_encode($msg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

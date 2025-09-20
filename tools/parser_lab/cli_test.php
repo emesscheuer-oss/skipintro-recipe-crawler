@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 error_reporting(E_ALL); ini_set('display_errors','1');
 require __DIR__ . '/../../includes/parser.php';
 
@@ -24,4 +24,3 @@ run_one(__DIR__ . '/fixtures/ente_chop_suey.html');
 run_one(__DIR__ . '/fixtures/biryani.html');
 run_one(__DIR__ . '/fixtures/haehnchen_biryani.html');
 
-?>

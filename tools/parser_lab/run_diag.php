@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 // Mini-Diagnose für Parser-Lab: zeigt Upload/INI/OpCache/Hashes/MTime
 

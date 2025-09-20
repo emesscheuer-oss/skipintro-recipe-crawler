@@ -1,6 +1,40 @@
 <!-- SITC_CHANGELOG_TOP: new entries must be inserted BELOW this line -->
 
-## [+ 0.0.1] [WIP]
+## [WIP] – in Arbeit
+### Added
+- Admin-Seite 'Validierung' (Parser-Lab) unter Beiträge → Validierung. JSON-Output via `&format=json`.
+ - RELEASE.md: Local-First Workflow dokumentiert (Pflichtlauf: Auto-Eval, Real-Data-Refresh, Frontend-Smoke).
+ - docs/SEEDS.md: Smoke-Test-Seeds (3–5 Post-IDs) dokumentiert.
+ - Dev-Badge: Anzeige von effective engine, requested engine, SITC_ING_V2 Flag, confidence, active flags.
+ - Importer-Quicklinks zu Validierung und Debug-Log (Dev-Mode only) für schnellere QA.
+### Files
+- includes/Admin/ValidationRunner.php
+- includes/Admin/ValidationPage.php
+- skipintro-recipe-crawler.php
+- RELEASE.md (neu)
+- docs/SEEDS.md (neu)
+- includes/renderer/dev_badge.php
+- includes/admin-page.php
+
+### Changed
+- parser_lab als LEGACY/Fallback gekennzeichnet ([ARCHIVE]); keine neuen Features, nur Bugfixes.
+- Harness: Fixture-Pfade robust aufgelöst (keine Mischpfade wie `tools/C:/...`), klare Fehlermeldung bei fehlender Fixture; kein leerer Input mehr an Parser.
+ - Frontend: Modular-Engine global aktiviert (`SITC_ING_V2 = ON`), Engine=auto bevorzugt Modular; stiller Fallback auf Legacy bei Fehler/Low-Quality; Query-Override `?engine=legacy|mod|auto`.
+ - Debug: Parser-Fehler-Logging (dev-only) mit Rotation (`uploads/skipintro-recipe-crawler/debug.log`).
+ - README.md: Verweist auf RELEASE & SEEDS.
+### Files
+- tools/parser_lab/README.md (neu)
+- tools/parser_lab/lib/harness.php
+- tools/parser_lab/run.php
+- tools/parser_lab/auto_eval_web.php
+ - includes/settings.php
+ - includes/parser.php
+ - skipintro-recipe-crawler.php
+ - includes/debug.php (neu)
+
+### Security/Perf
+- Quicklinks sind dev-gated (WP_DEBUG/SITC_DEV_MODE/Dev-Option) und nur im Admin sichtbar; kein Einfluss auf Frontend-Renderpfad.
+
 ### Fixed
 - Frontend-Whitespace oberhalb des Inhalts eliminiert – Admin-Code strikt auf `is_admin()` begrenzt, Frontend-Output-Guard eingeführt, BOM/Whitespace-Risiken beseitigt; optionaler CSS-Fallback.
 ### Files
@@ -10,7 +44,6 @@
 - includes/refresh.php
 - tools/dev/scan_bom.php (Dev)
 
-## [+ 0.0.1] [WIP]
 ### Fixed
 - Parser-Lab: diag_box() akzeptiert nun Strings und Arrays; verhindert TypeError.
 ### Files
@@ -31,7 +64,6 @@
 - includes/parser.php (MUX only)
 - tools/parser_lab/run.php (Badge/Toggle unverändert, dev-dump)
 
-## [+ 0.0.1] [WIP]
 ### Added
 - Web-Auto-Eval (Legacy vs. Modular) unter `tools/parser_lab/auto_eval_web.php`.
 ### Changed

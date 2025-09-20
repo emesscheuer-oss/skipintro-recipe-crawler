@@ -1,0 +1,140 @@
+{
+  "cases": [
+    {
+      "line": "600 g Hähnchenfleisch (Meine Empfehlung: Pollo Fino zu nehmen; gewürfelt & enthäutet)",
+      "qty": 600,
+      "unit": "g",
+      "item": "Hähnchenfleisch",
+      "note": "Meine Empfehlung: Pollo Fino zu nehmen; gewürfelt & enthäutet"
+    },
+    {
+      "line": "4 clove Knoblauchzehen (gepresst)",
+      "qty": 4,
+      "unit": null,
+      "item": "Knoblauchzehen",
+      "note": "gepresst"
+    },
+    {
+      "line": "2 tbsp Joghurt (.5% Fett)",
+      "qty": 2,
+      "unit": "EL",
+      "item": "Joghurt",
+      "note": "0.5% Fett"
+    },
+    {
+      "line": "3 tbsp Olivenöl",
+      "qty": 3,
+      "unit": "EL",
+      "item": "Olivenöl",
+      "note": null
+    },
+    {
+      "line": "0.5 Zitrone (Saft der Zitrone)",
+      "qty": 0.5,
+      "unit": "Stück",
+      "item": "Zitrone",
+      "note": "Saft der Zitrone"
+    },
+    {
+      "line": "0.5 tsp Kurkuma",
+      "qty": 0.5,
+      "unit": "TL",
+      "item": "Kurkuma",
+      "note": null
+    },
+    {
+      "line": "1 tsp Chili- und Paprikapulver (Garam Masala)",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Chili- und Paprikapulver",
+      "note": "Garam Masala"
+    },
+    {
+      "line": "Salz & Pfeffer nach Geschmack",
+      "item": "Salz & Pfeffer",
+      "note": "nach Geschmack"
+    },
+    {
+      "line": "60 ml Öl zum anbraten (zb. Sonnenblumenöl)",
+      "qty": 60,
+      "unit": "ml",
+      "item": "Öl",
+      "note": "zum Anbraten, z. B. Sonnenblumenöl"
+    },
+    {
+      "line": "15 g Ingwer (Stück)",
+      "qty": 15,
+      "unit": "g",
+      "item": "Ingwer",
+      "note": "Stück"
+    },
+    {
+      "line": "1 große Zwiebel (gewürfelt)",
+      "qty": 1,
+      "unit": "Stück",
+      "item": "Zwiebel",
+      "note": "groß, gewürfelt"
+    },
+    {
+      "line": "80 g Butter",
+      "qty": 80,
+      "unit": "g",
+      "item": "Butter",
+      "note": null
+    },
+    {
+      "line": "60 g Cashewnüsse",
+      "qty": 60,
+      "unit": "g",
+      "item": "Cashewnüsse",
+      "note": null
+    },
+    {
+      "line": "500 ml passierte Tomaten (oder 5 frische Tomaten (gewürfelt))",
+      "qty": 500,
+      "unit": "ml",
+      "item": "passierte Tomaten",
+      "note": "oder 5 frische Tomaten, gewürfelt"
+    },
+    {
+      "line": "200 ml Schlagsahne",
+      "qty": 200,
+      "unit": "ml",
+      "item": "Schlagsahne",
+      "note": null
+    },
+    {
+      "line": "1 tbsp getrocknete Bockshornkleeblätter",
+      "qty": 1,
+      "unit": "EL",
+      "item": "getrocknete Bockshornkleeblätter",
+      "note": null
+    },
+    {
+      "line": "1 tsp Paprika (Chili-, Korianderpulver, Garam Masala, Kreuzkümmel)",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Paprika",
+      "note": "Chili-, Korianderpulver, Garam Masala, Kreuzkümmel"
+    },
+    {
+      "line": "0.25 tsp Zucker",
+      "qty": 0.25,
+      "unit": "TL",
+      "item": "Zucker",
+      "note": null
+    },
+    {
+      "line": "frische gehackte Kräuter für Deko (zb. Petersilie oder Koriander)",
+      "item": "frische gehackte Kräuter",
+      "note": "für Deko, z. B. Petersilie oder Koriander"
+    },
+    {
+      "line": "1 tsp Chiliflocken (hot) & getrockneten Bockshornklee (optional)",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Chiliflocken & getrockneter Bockshornklee",
+      "note": "hot, optional"
+    }
+  ]
+}

@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 // Standalone helper library for parser_lab
 

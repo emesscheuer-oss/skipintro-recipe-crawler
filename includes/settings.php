@@ -3,7 +3,8 @@ if (!defined('ABSPATH')) exit;
 
 // Feature flag: gate modular ingredient pipeline (default OFF)
 if (!defined('SITC_ING_V2')) {
-    define('SITC_ING_V2', false);
+    // Global activation: modular ingredient engine ON (with safe fallback in auto mode)
+    define('SITC_ING_V2', true);
 }
 
 // Option accessor

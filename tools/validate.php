@@ -34,7 +34,9 @@ $dupes = [
     '1  Lorbeerblatt',
     '1 lorbeerblatt',
 ];
-[$disp, $parsed] = sitc_dedupe_ingredients($dupes);
+$_dedupe = sitc_dedupe_ingredients($dupes);
+$disp = isset($_dedupe[0]) ? $_dedupe[0] : [];
+$parsed = isset($_dedupe[1]) ? $_dedupe[1] : [];
 show('dedupe_disp', $disp);
 show('dedupe_parsed_count', count($parsed));
 
@@ -48,4 +50,3 @@ echo "\nSUMMARY: ", json_encode([
     'range_ok'       => $ok3,
     'dedupe_one'     => count($parsed) === 1,
 ], JSON_UNESCAPED_UNICODE), "\n";
-

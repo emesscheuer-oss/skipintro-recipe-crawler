@@ -100,7 +100,31 @@ function sitc_handle_refresh_recipe() {
         $result = sitc_parse_recipe_from_url_v2($source_url);
     } catch (Throwable $e) {
         error_log('SITC Refresh fatal: ' . $e->getMessage());
-        sitc_store_admin_notice('error', __('Parser-Fehler beim Aktualisieren (abgefangen).', 'sitc'));
+        if (function_exists('sitc_parser_debug_log')) {
+            $eng = function_exists('sitc_get_ing_engine') ? sitc_get_ing_engine() : ($GLOBALS['SITC_ING_ENGINE'] ?? 'auto');
+            sitc_parser_debug_log([
+                'engine' => $eng,
+                'post_id' => (int)$post_id,
+                'exception' => get_class($e) . ': ' . $e->getMessage(),
+                'phase' => 'unknown',
+                'fallback_triggered' => false,
+            ]);
+        }
+        $detailHtml = '';
+        if (function_exists('sitc_parser_debug_logging_enabled') && sitc_parser_debug_logging_enabled()) {
+            $lines = function_exists('sitc_debug_tail') ? sitc_debug_tail(50, 10240) : [];
+            if ($lines) {
+                $esc = array_map('esc_html', $lines);
+                $pre = '<details><summary>Details (letzte 50 Log-Zeilen)</summary>'
+                     . '<pre class="sitc-log-preview">' . implode("\n", $esc) . '</pre>'
+                     . '<style>.sitc-log-preview{max-height:280px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:#111;color:#eee;padding:8px;border-radius:6px;}</style>'
+                     . '</details>';
+                $detailHtml = $pre;
+            } else {
+                $detailHtml = '<p><em>' . esc_html__('Kein Debug-Log verfügbar (Logging inaktiv oder Datei leer).', 'sitc') . '</em></p>';
+            }
+        }
+        sitc_store_admin_notice('error', __('Parser-Fehler beim Aktualisieren (abgefangen).', 'sitc'), $detailHtml);
         wp_safe_redirect(wp_get_referer() ?: admin_url('post.php?post='.$post_id.'&action=edit'));
         exit;
     }
@@ -149,7 +173,17 @@ function sitc_handle_refresh_recipe() {
         if ($new_img !== '') {
             $old_thumb = get_post_thumbnail_id($post_id);
             if (!$dry_run) {
-                sitc_set_featured_image($post_id, $new_img, []);
+                $ok = function_exists('sitc_maybe_set_featured_image') ? sitc_maybe_set_featured_image($post_id, $new_img) : false;
+                if (!$ok && function_exists('sitc_parser_debug_log')) {
+                    $eng = function_exists('sitc_get_ing_engine') ? sitc_get_ing_engine() : ($GLOBALS['SITC_ING_ENGINE'] ?? 'auto');
+                    sitc_parser_debug_log([
+                        'engine' => $eng,
+                        'post_id' => (int)$post_id,
+                        'message' => 'featured image not set',
+                        'phase' => 'refresh_media',
+                        'fallback_triggered' => false,
+                    ]);
+                }
             }
             $new_thumb = $dry_run ? $old_thumb : get_post_thumbnail_id($post_id);
             if ($new_thumb !== $old_thumb) {
@@ -287,6 +321,9 @@ function sitc_handle_refresh_recipe() {
     if (!$dry_run) {
         update_post_meta($post_id, '_sitc_last_refreshed', $now_utc);
         update_post_meta($post_id, '_sitc_parser_version', $parser_version);
+        if (function_exists('sitc_get_ing_parser_version')) {
+            update_post_meta($post_id, '_sitc_ing_parser_version', sitc_get_ing_parser_version());
+        }
     }
     sitc_append_refresh_log($post_id, [
         'ts' => $now_utc,

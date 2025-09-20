@@ -1,0 +1,51 @@
+[
+    {
+        "raw": "0,50 Stück Zitrone (Saft)",
+        "qty": 0.5,
+        "unit": "piece",
+        "item": "Stück Zitrone",
+        "note": "Saft"
+    },
+    {
+        "raw": "4 Knoblauchzehen",
+        "qty": 4,
+        "unit": "clove",
+        "item": "Knoblauchzehen",
+        "note": null
+    },
+    {
+        "raw": "ca. 60 ml Öl zum Anbraten",
+        "qty": 60,
+        "unit": "ml",
+        "item": "Öl",
+        "note": "zum Anbraten"
+    },
+    {
+        "raw": "ca. 15 g Ingwer-Stück",
+        "qty": 15,
+        "unit": "g",
+        "item": "Ingwer–Stück",
+        "note": null
+    },
+    {
+        "raw": "250 g Hähnchenbrust",
+        "qty": 250,
+        "unit": "g",
+        "item": "Hähnchenbrust",
+        "note": null
+    },
+    {
+        "raw": "1½ EL Joghurt",
+        "qty": 1,
+        "unit": "tbsp",
+        "item": "Joghurt",
+        "note": null
+    },
+    {
+        "raw": "1 1\/2 TL Garam Masala",
+        "qty": 1.5,
+        "unit": "tsp",
+        "item": "Garam Masala",
+        "note": null
+    }
+]

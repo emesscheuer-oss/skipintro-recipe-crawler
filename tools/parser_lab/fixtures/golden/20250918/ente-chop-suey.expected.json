@@ -1,0 +1,178 @@
+{
+  "cases": [
+    {
+      "line": "½ TK Enten (vorgegart und aufgetaut)",
+      "qty": 0.5,
+      "unit": "Stück",
+      "item": "Ente",
+      "note": "TK, vorgegart und aufgetaut"
+    },
+    {
+      "line": "2 tbsp Mehl",
+      "qty": 2,
+      "unit": "EL",
+      "item": "Mehl",
+      "note": null
+    },
+    {
+      "line": "30 ml Wasser",
+      "qty": 30,
+      "unit": "ml",
+      "item": "Wasser",
+      "note": null
+    },
+    {
+      "line": "Neutrales Öl zum Ausbacken",
+      "item": "Neutrales Öl",
+      "note": "zum Ausbacken"
+    },
+    {
+      "line": "160 g Basmatireis",
+      "qty": 160,
+      "unit": "g",
+      "item": "Basmatireis",
+      "note": null
+    },
+    {
+      "line": "240 ml Wasser",
+      "qty": 240,
+      "unit": "ml",
+      "item": "Wasser",
+      "note": null
+    },
+    {
+      "line": "1 clove Knoblauchzehe",
+      "qty": 1,
+      "unit": null,
+      "item": "Knoblauchzehe",
+      "note": null
+    },
+    {
+      "line": "6 g Ingwer",
+      "qty": 6,
+      "unit": "g",
+      "item": "Ingwer",
+      "note": null
+    },
+    {
+      "line": "50 g Schalotten",
+      "qty": 50,
+      "unit": "g",
+      "item": "Schalotten",
+      "note": null
+    },
+    {
+      "line": "2 Frühlingszwiebeln",
+      "qty": 2,
+      "unit": "Stück",
+      "item": "Frühlingszwiebeln",
+      "note": null
+    },
+    {
+      "line": "50 g Karotten",
+      "qty": 50,
+      "unit": "g",
+      "item": "Karotten",
+      "note": null
+    },
+    {
+      "line": "½ Paprika (rot)",
+      "qty": 0.5,
+      "unit": "Stück",
+      "item": "Paprika",
+      "note": "rot"
+    },
+    {
+      "line": "2 Pak Choi",
+      "qty": 2,
+      "unit": "Stück",
+      "item": "Pak Choi",
+      "note": null
+    },
+    {
+      "line": "100 g frische Shiitake-Pilze",
+      "qty": 100,
+      "unit": "g",
+      "item": "Shiitake-Pilze",
+      "note": "frisch"
+    },
+    {
+      "line": "50 g Bambusstreifen aus der Dose",
+      "qty": 50,
+      "unit": "g",
+      "item": "Bambusstreifen",
+      "note": "aus der Dose"
+    },
+    {
+      "line": "1 tbsp Erdnussöl",
+      "qty": 1,
+      "unit": "EL",
+      "item": "Erdnussöl",
+      "note": null
+    },
+    {
+      "line": "2 tbsp helle Sojasauce",
+      "qty": 2,
+      "unit": "EL",
+      "item": "helle Sojasauce",
+      "note": null
+    },
+    {
+      "line": "1 tbsp Speisestärke",
+      "qty": 1,
+      "unit": "EL",
+      "item": "Speisestärke",
+      "note": null
+    },
+    {
+      "line": "2 tbsp Reisessig",
+      "qty": 2,
+      "unit": "EL",
+      "item": "Reisessig",
+      "note": null
+    },
+    {
+      "line": "30 ml Austernsauce",
+      "qty": 30,
+      "unit": "ml",
+      "item": "Austernsauce",
+      "note": null
+    },
+    {
+      "line": "200 ml Hühnerbrühe",
+      "qty": 200,
+      "unit": "ml",
+      "item": "Hühnerbrühe",
+      "note": null
+    },
+    {
+      "line": "½ EL Sambal Oelek",
+      "qty": 0.5,
+      "unit": "EL",
+      "item": "Sambal Oelek",
+      "note": null
+    },
+    {
+      "line": "50 g Mungobohnensprossen",
+      "qty": 50,
+      "unit": "g",
+      "item": "Mungobohnensprossen",
+      "note": null
+    },
+    {
+      "line": "Salz & Pfeffer",
+      "item": "Salz & Pfeffer",
+      "note": null
+    },
+    {
+      "line": "Frischer Koriander",
+      "item": "Koriander",
+      "note": "frisch"
+    },
+    {
+      "line": "Frische Mungobohnensprossen",
+      "item": "Mungobohnensprossen",
+      "note": "frisch"
+    }
+  ]
+}

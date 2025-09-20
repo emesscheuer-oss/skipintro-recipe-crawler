@@ -1,0 +1,117 @@
+{
+  "cases": [
+    {
+      "line": "1 kg Rindfleisch (Schulter oder Brust, in große Stücke geschnitten)",
+      "qty": 1,
+      "unit": "kg",
+      "item": "Rindfleisch",
+      "note": "Schulter oder Brust, in große Stücke geschnitten"
+    },
+    {
+      "line": "500 ml Rinderbrühe",
+      "qty": 500,
+      "unit": "ml",
+      "item": "Rinderbrühe",
+      "note": null
+    },
+    {
+      "line": "4 getrocknete Guajillo-Chilis (entkernt)",
+      "qty": 4,
+      "unit": "Stück",
+      "item": "getrocknete Guajillo-Chilis",
+      "note": "entkernt"
+    },
+    {
+      "line": "3 getrocknete Ancho-Chilis (entkernt)",
+      "qty": 3,
+      "unit": "Stück",
+      "item": "getrocknete Ancho-Chilis",
+      "note": "entkernt"
+    },
+    {
+      "line": "1 mittelgroße weiße Zwiebel (grob gehackt)",
+      "qty": 1,
+      "unit": "Stück",
+      "item": "weiße Zwiebel",
+      "note": "mittelgroß, grob gehackt"
+    },
+    {
+      "line": "5 clove Knoblauchzehen",
+      "qty": 5,
+      "unit": null,
+      "item": "Knoblauchzehen",
+      "note": null
+    },
+    {
+      "line": "2 Lorbeerblätter",
+      "qty": 2,
+      "unit": "Stück",
+      "item": "Lorbeerblätter",
+      "note": null
+    },
+    {
+      "line": "1 tsp Kreuzkümmel",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Kreuzkümmel",
+      "note": null
+    },
+    {
+      "line": "1 tsp Oregano (vorzugsweise mexikanischer Oregano)",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Oregano",
+      "note": "vorzugsweise mexikanischer Oregano"
+    },
+    {
+      "line": "1 tsp Salz",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Salz",
+      "note": null
+    },
+    {
+      "line": "0.5 tsp schwarzer Pfeffer",
+      "qty": 0.5,
+      "unit": "TL",
+      "item": "schwarzer Pfeffer",
+      "note": null
+    },
+    {
+      "line": "2 tbsp Apfelessig",
+      "qty": 2,
+      "unit": "EL",
+      "item": "Apfelessig",
+      "note": null
+    },
+    {
+      "line": "12 kleine Maistortillas",
+      "qty": 12,
+      "unit": "Stück",
+      "item": "Maistortillas",
+      "note": "klein"
+    },
+    {
+      "line": "200 g geriebener Käse (Mozzarella oder einen anderen milden Käse)",
+      "qty": 200,
+      "unit": "g",
+      "item": "geriebener Käse",
+      "note": "Mozzarella oder einen anderen milden Käse"
+    },
+    {
+      "line": "Frischer Koriander (gehackt (zum Garnieren))",
+      "item": "Koriander",
+      "note": "frisch, gehackt, zum Garnieren"
+    },
+    {
+      "line": "Kleine weiße Zwiebel (gewürfelt (zum Garnieren))",
+      "item": "weiße Zwiebel",
+      "note": "klein, gewürfelt, zum Garnieren"
+    },
+    {
+      "line": "Limettenspalten (zum Servieren)",
+      "item": "Limettenspalten",
+      "note": "zum Servieren"
+    }
+  ]
+}

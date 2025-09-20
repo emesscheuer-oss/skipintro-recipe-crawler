@@ -21,38 +21,89 @@ function sitc_render_recipe(array $data): string {
     $trash_token  = (string)($data['trash_token'] ?? '');
     $show_original = (bool)($data['show_original'] ?? false);
     $source_url    = (string)($data['source_url'] ?? '');
+    $groupsForRender = isset($data['groupsForRender']) ? (array)$data['groupsForRender'] : [];
+    $rawLines = isset($data['rawLines']) ? (array)$data['rawLines'] : [];
+    $parser_ver = isset($data['parser_ver']) ? (string)$data['parser_ver'] : null;
+    $renderer_ver = isset($data['renderer_ver']) ? (string)$data['renderer_ver'] : null;
 
-    ob_start(); ?>
-    <div class="sitc-recipe" data-post="<?php echo (int)$post_id; ?>">
-        <?php echo sitc_render_recipe_header([
-            'post_id'=>$post_id,
-            'yield_num'=>$yield_num,
-            'yield_raw'=>$yield_raw,
-            'show_original'=>$show_original,
-            'use_fallback'=>$use_fallback,
-            'trash_token'=>$trash_token,
-        ]); ?>
-        <?php echo sitc_render_dev_badge(['post_id'=>$post_id,'ingredients'=>$ingredients]); ?>
-        <?php echo sitc_render_ingredients([
-            'post_id'=>$post_id,
-            'yield_num'=>$yield_num,
-            'ingredients'=>$ingredients,
-            'use_fallback'=>$use_fallback,
-        ]); ?>
-        <?php echo sitc_render_instructions(['instructions'=>$instructions]); ?>
-        <?php if (!empty($source_url)) : ?>
-            <p class="sitc-source">
-                Quelle: <a href="<?php echo esc_url($source_url); ?>" target="_blank" rel="nofollow noopener">Originalrezept ansehen</a>
-            </p>
-        <?php endif; ?>
-    </div>
-    <?php return (string)ob_get_clean();
+    $html = '';
+
+    $html .= '<div class="sitc-recipe" data-post="' . esc_attr((string)(int)$post_id) . '">';
+    $html .= "\n";
+
+    $html .= sitc_render_header([
+        'post_id'      => $post_id,
+        'yield_num'    => $yield_num,
+        'yield_raw'    => $yield_raw,
+        'show_original'=> $show_original,
+        'use_fallback' => $use_fallback,
+        'trash_token'  => $trash_token,
+        'parser_ver'   => $parser_ver,
+        'renderer_ver' => $renderer_ver,
+    ]);
+    $html .= "\n";
+
+    $html .= sitc_render_dev_badge([
+        'post_id'     => $post_id,
+        'ingredients' => $ingredients,
+    ]);
+    $html .= "\n";
+
+    $html .= sitc_render_ingredients([
+        'post_id'          => $post_id,
+        'yield_num'        => $yield_num,
+        'ingredients'      => $ingredients,
+        'groupsForRender'  => $groupsForRender,
+        'rawLines'         => $rawLines,
+        'use_fallback'     => $use_fallback,
+    ]);
+    $html .= "\n";
+
+    $html .= sitc_render_instructions([
+        'instructions' => $instructions,
+    ]);
+
+    if (!empty($source_url)) {
+        $html .= "\n";
+        $html .= '<p class="sitc-source">Quelle: <a href="' . esc_url((string)$source_url) . '" target="_blank" rel="nofollow noopener">Originalrezept ansehen</a></p>';
+    }
+
+    $html .= "\n";
+    $html .= '</div>';
+
+    return $html;
 }
-
 // Backwards-compatible entry used by content filter
 function sitc_render_recipe_shortcode($post_id = 0) {
     $post_id = $post_id ? (int)$post_id : get_the_ID();
     if (!$post_id) return '';
+
+    // Soft invalidation: if stored ingredient parser version differs, try to reparse and refresh metas once
+    try {
+        $storedIngVer = get_post_meta($post_id, '_sitc_ing_parser_version', true);
+        $curIngVer = function_exists('sitc_get_ing_parser_version') ? sitc_get_ing_parser_version() : '';
+        if ($curIngVer !== '' && (string)$storedIngVer !== (string)$curIngVer) {
+            $srcUrl = get_post_meta($post_id, '_sitc_source_url', true);
+            $srcUrl = is_string($srcUrl) ? trim($srcUrl) : '';
+            if ($srcUrl !== '' && function_exists('sitc_parse_recipe_from_url_v2')) {
+                $re = sitc_parse_recipe_from_url_v2($srcUrl);
+                if (is_array($re)) {
+                    if (!empty($re['ingredients_struct'])) update_post_meta($post_id, '_sitc_ingredients_struct', $re['ingredients_struct']);
+                    if (!empty($re['instructions']))       update_post_meta($post_id, '_sitc_instructions', $re['instructions']);
+                    if (isset($re['yield_raw']))           update_post_meta($post_id, '_sitc_yield_raw', $re['yield_raw']);
+                    if (isset($re['yield_num']))           update_post_meta($post_id, '_sitc_yield_num', $re['yield_num']);
+                    if (!empty($re['meta'])) {
+                        $m = $re['meta'];
+                        if (!empty($m['schema_recipe'])) update_post_meta($post_id, '_sitc_schema_recipe_json', wp_json_encode($m['schema_recipe']));
+                        if (array_key_exists('confidence', $m)) update_post_meta($post_id, '_sitc_confidence', (float)$m['confidence']);
+                        if (!empty($m['sources']))        update_post_meta($post_id, '_sitc_sources_json', wp_json_encode($m['sources']));
+                        if (!empty($m['flags']))          update_post_meta($post_id, '_sitc_flags_json', wp_json_encode($m['flags']));
+                    }
+                    update_post_meta($post_id, '_sitc_ing_parser_version', $curIngVer);
+                }
+            }
+        }
+    } catch (Throwable $e) { /* never break render; soft-invalidation best-effort */ }
 
     // Gather data from post meta
     $ingredients  = sitc_normalize_array_meta(get_post_meta($post_id, '_sitc_ingredients_struct', true));

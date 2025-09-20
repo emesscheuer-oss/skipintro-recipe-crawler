@@ -1,0 +1,30 @@
+[
+    {
+        "raw": "½ TK Ente, vorgegart und aufgetaut",
+        "qty": null,
+        "unit": null,
+        "item": "½ TK Ente, vorgegart und aufgetaut",
+        "note": null
+    },
+    {
+        "raw": "½ Paprika, rot",
+        "qty": null,
+        "unit": null,
+        "item": "½ Paprika",
+        "note": "rot"
+    },
+    {
+        "raw": "2 Frühlingszwiebeln",
+        "qty": 2,
+        "unit": null,
+        "item": "Frühlingszwiebeln",
+        "note": null
+    },
+    {
+        "raw": "30 ml Wasser",
+        "qty": 30,
+        "unit": "ml",
+        "item": "Wasser",
+        "note": null
+    }
+]

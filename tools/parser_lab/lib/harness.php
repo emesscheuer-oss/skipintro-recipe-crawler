@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 // Parser-Lab harness: central parse entry with error capture and normalization
 
@@ -111,9 +110,14 @@ function sitc_run_fixture(string $fixturePath, ?string $pageUrl = null): array {
     $pluginRoot = realpath(dirname(__DIR__, 2)) ?: (dirname(__DIR__, 2));
     $parserPhp  = $pluginRoot . '/includes/parser.php';
 
-    // Resolve fixture (support absolute Windows/Unix paths)
-    $isAbs = (bool)preg_match('~^(?:[a-zA-Z]:\\\\|/|\\\\)~', $fixturePath);
-    $fixtureRel = $isAbs ? $fixturePath : ltrim($fixturePath, '/');
+    // Resolve fixture (robust: support absolute Windows/Unix; avoid mixed prefixes like 'tools/C:/...')
+    $in = (string)$fixturePath;
+    // Strip accidental 'tools/' prefix before a Windows drive or UNC path
+    $in = preg_replace('~^tools[\\/]+(?=(?:[a-zA-Z]:[\\/]|\\\\\\\\))~', '', $in);
+    // Normalize backslashes for detection (do not alter final filesystem path semantics)
+    $detect = str_replace('\\', '/', $in);
+    $isAbs = (bool)preg_match('~^(?:[a-zA-Z]:/|/|\\\\\\\\)~', $detect);
+    $fixtureRel = $isAbs ? $in : ltrim($in, '/');
     $fixtureAbs = $isAbs ? $fixtureRel : ($pluginRoot . '/' . $fixtureRel);
     $fixtureAbsReal = (is_file($fixtureAbs) ? (realpath($fixtureAbs) ?: $fixtureAbs) : $fixtureAbs);
 
@@ -169,7 +173,7 @@ function sitc_run_fixture(string $fixturePath, ?string $pageUrl = null): array {
             }
         }
     } else {
-        $errors[] = 'Fixture MISSING: ' . $fixtureAbsReal;
+        $errors[] = 'Fixture nicht vorhanden, bitte Datei im Verzeichnis fixtures/ prüfen. Pfad: ' . $fixtureAbsReal;
     }
 
     // Fallback URL when none provided
@@ -181,7 +185,10 @@ function sitc_run_fixture(string $fixturePath, ?string $pageUrl = null): array {
     $parseMs = null;
     $exceptionSummary = null;
     try {
-        if (function_exists('parseRecipe')) {
+        if ($html === '' || $html === null) {
+            // Do not pass empty input to parser; return clear infra error instead
+            $errors[] = 'Kein Inhalt geladen (leerer Input) – bitte Fixture prüfen.';
+        } elseif (function_exists('parseRecipe')) {
             $t0 = microtime(true);
             $res = parseRecipe((string)$html, (string)$url);
             $t1 = microtime(true);

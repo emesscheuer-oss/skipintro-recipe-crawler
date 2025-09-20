@@ -1,16 +1,19 @@
 <?php
-declare(strict_types=1);
 
-if (!defined('ABSPATH')) exit;
-function sitc_render_ingredients(array $data): string {
-    $post_id      = (int)($data['post_id'] ?? 0);
-    $yield_num    = (int)($data['yield_num'] ?? 2);
-    $ingredients  = (array)($data['ingredients'] ?? []);
-    $use_fallback = (bool)($data['use_fallback'] ?? false);
+if (!defined('ABSPATH')) {
+    exit;
+}
 
-    // Prefer grouped rendering if not in fallback
-    $groupsForRender = [];
-    if (!$use_fallback) {
+function sitc_render_ingredients(array $args): string
+{
+    $post_id = (int) ($args['post_id'] ?? 0);
+    $yield_num = $args['yield_num'] ?? 2;
+    $ingredients = isset($args['ingredients']) ? (array) $args['ingredients'] : [];
+    $use_fallback = (bool) ($args['use_fallback'] ?? false);
+    $groupsForRender = isset($args['groupsForRender']) ? (array) $args['groupsForRender'] : [];
+    $rawLines = isset($args['rawLines']) ? (array) $args['rawLines'] : [];
+
+    if (!$use_fallback && empty($groupsForRender)) {
         try {
             if (function_exists('sitc_build_ingredient_groups_for_render')) {
                 $sourceGroups = sitc_build_ingredient_groups_for_render($post_id);
@@ -18,154 +21,207 @@ function sitc_render_ingredients(array $data): string {
                     $groupsForRender = sitc_prepare_grouped_items($sourceGroups);
                 }
             }
-        } catch (Throwable $e) { error_log('SITC Renderer grouping fatal: '.$e->getMessage()); $groupsForRender = []; }
+        } catch (Throwable $e) {
+            error_log('SITC Renderer grouping fatal: ' . $e->getMessage());
+            $groupsForRender = [];
+        }
     }
 
-    ob_start();
-    if (!$use_fallback && !empty($groupsForRender)) : ?>
-        <h3>Zutaten</h3>
-        <?php foreach ($groupsForRender as $group): ?>
-            <h4><?php echo esc_html((string)$group['name']); ?></h4>
-            <ul class="sitc-ingredients" data-base-servings="<?php echo esc_attr($yield_num); ?>">
-                <?php foreach ((array)$group['items'] as $it):
-                    $qtyRaw   = (string)($it['qty'] ?? '');
-                    $unitRaw  = (string)($it['unit'] ?? '');
-                    $name     = (string)($it['name'] ?? '');
-                    sitc_render_ingredient_li($post_id, $qtyRaw, $unitRaw, $name);
-                endforeach; ?>
-            </ul>
-        <?php endforeach; ?>
-    <?php elseif (!$use_fallback && !empty($ingredients)) : ?>
-        <h3>Zutaten</h3>
-        <ul class="sitc-ingredients" data-base-servings="<?php echo esc_attr($yield_num); ?>">
-            <?php $ingredients = function_exists('sitc_merge_ingredients_for_display') ? sitc_merge_ingredients_for_display($ingredients) : $ingredients; foreach ($ingredients as $ing):
-                $qtyRaw   = (string)($ing['qty'] ?? '');
-                $unitRaw  = (string)($ing['unit'] ?? '');
-                $name     = (string)($ing['name'] ?? '');
-                sitc_render_ingredient_li($post_id, $qtyRaw, $unitRaw, $name);
-            endforeach; ?>
-        </ul>
+    $buildStructuredLi = static function (int $postId, string $qtyRaw, string $unitRaw, string $name): string {
+        $nameDisp = sitc_cased_de_ingredient(trim($name));
+        $qInfo = function_exists('sitc_parse_qty_or_range_v2')
+            ? sitc_parse_qty_or_range_v2($qtyRaw)
+            : sitc_parse_qty_or_range($qtyRaw);
 
-        <div id="sitc-list-<?php echo $post_id; ?>" class="sitc-grocery collapsed" hidden>
-            <h4>Einkaufsliste</h4>
-            <ul>
-                <?php $ingredients = function_exists('sitc_merge_ingredients_for_display') ? sitc_merge_ingredients_for_display($ingredients) : $ingredients; foreach ($ingredients as $ing):
-                    $qtyRaw  = $ing['qty'] ?? '';
-                    $unitRaw = $ing['unit'] ?? '';
-                    $name    = $ing['name'] ?? '';
-                    $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
-                    $qInfo   = function_exists('sitc_parse_qty_or_range_v2') ? sitc_parse_qty_or_range_v2($qtyRaw) : sitc_parse_qty_or_range($qtyRaw);
-                    if ($qInfo['isRange']) {
-                        $dispQty = sitc_format_qty_display($qInfo['low']) . '–' . sitc_format_qty_display($qInfo['high']);
-                    } elseif ($qInfo['low'] !== null) {
-                        $dispQty = sitc_format_qty_display($qInfo['low']);
-                    } else {
-                        $v = sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw)); $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
-                    }
-                    $unitDe  = sitc_unit_to_de($unitRaw);
-                    ?>
-                    <li><?php echo esc_html(trim(($dispQty !== '' ? $dispQty.' ' : '').($unitDe ? $unitDe.' ' : '').$nameDisp)); ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    <?php else: // Fallback: simple list from schema -> recipeIngredient ?>
-        <?php
-            $rawLines = [];
+        if (!is_array($qInfo)) {
+            $qInfo = ['isRange' => false, 'low' => null, 'high' => null];
+        }
+
+        if (!empty($qInfo['isRange'])) {
+            $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
+        } elseif ($qInfo['low'] !== null) {
+            $dispQty = sitc_format_qty_display($qInfo['low']);
+        } else {
+            $v = function_exists('sitc_coerce_qty_float_v2')
+                ? sitc_coerce_qty_float_v2((string)$qtyRaw)
+                : sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
+            $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
+        }
+
+        $unitDe = sitc_unit_to_de($unitRaw);
+        $id_for = 'sitc_chk_' . $postId . '_' . md5($qtyRaw . '|' . $unitRaw . '|' . $name);
+
+        $li = '<li class="sitc-ingredient"';
+        if (!empty($qInfo['isRange'])) {
+            $li .= ' data-qty-low="' . esc_attr(str_replace(',', '.', (string)$qInfo['low'])) . '"';
+            $li .= ' data-qty-high="' . esc_attr(str_replace(',', '.', (string)$qInfo['high'])) . '"';
+        } else {
+            $dataQtyVal = $qInfo['low'];
+            if ($dataQtyVal === null) {
+                $v2 = function_exists('sitc_coerce_qty_float_v2')
+                    ? sitc_coerce_qty_float_v2((string)$qtyRaw)
+                    : sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
+                if ($v2 !== null) {
+                    $dataQtyVal = (float)$v2;
+                }
+            }
+            $li .= ' data-qty="' . esc_attr($dataQtyVal !== null ? str_replace(',', '.', (string)$dataQtyVal) : '') . '"';
+        }
+
+        $li .= ' data-unit="' . esc_attr((string)$unitDe) . '" data-name="' . esc_attr((string)$name) . '">';
+        $li .= '<label for="' . esc_attr((string)$id_for) . '">';
+        $li .= '<input type="checkbox" id="' . esc_attr((string)$id_for) . '" class="sitc-chk">';
+        $li .= '<span class="sitc-line">';
+        $li .= '<span class="sitc-qty">' . esc_html((string)$dispQty) . '</span>';
+        if ($unitDe !== '') {
+            $li .= '<span class="sitc-unit"> ' . esc_html((string)$unitDe) . '</span>';
+        }
+        $li .= '<span class="sitc-name"> ' . esc_html((string)$nameDisp) . '</span>';
+        $li .= '</span>';
+        $li .= '</label></li>';
+
+        return $li;
+    };
+
+    $buildRawLi = static function (int $postId, string $line) use ($buildStructuredLi): string {
+        $raw = sitc_text_sanitize((string)$line);
+        if (function_exists('sitc_parse_ingredient_line_v3')) {
+            $parsed = sitc_parse_ingredient_line_v3($raw);
+        } else {
+            $parsed = sitc_parse_ingredient_line_v2($raw);
+        }
+
+        $name = trim((string) ($parsed['item'] ?? ''));
+        $note = trim((string) ($parsed['note'] ?? ''));
+        if ($note !== '') {
+            $name .= ' (' . $note . ')';
+        }
+
+        $qtyRaw = isset($parsed['qty']) ? (string)$parsed['qty'] : '';
+        if ($qtyRaw === '' || $qtyRaw === null) {
+            if (function_exists('sitc_extract_leading_qty_token_v2')) {
+                $lead = sitc_extract_leading_qty_token_v2($raw);
+                if ($lead !== '') {
+                    $qtyRaw = $lead;
+                }
+            }
+        }
+
+        $unitRaw = isset($parsed['unit']) ? (string)$parsed['unit'] : '';
+
+        return $buildStructuredLi($postId, $qtyRaw, $unitRaw, $name);
+    };
+
+    $html = '';
+
+    if (!$use_fallback && !empty($groupsForRender)) {
+        $html .= '<h3>Zutaten</h3>';
+        foreach ($groupsForRender as $group) {
+            $groupName = (string) ($group['name'] ?? '');
+            $html .= '<h4>' . esc_html($groupName) . '</h4>';
+            $html .= '<ul class="sitc-ingredients" data-base-servings="' . esc_attr((string)$yield_num) . '">';
+            foreach ((array) ($group['items'] ?? []) as $item) {
+                $qtyRaw = (string) ($item['qty'] ?? '');
+                $unitRaw = (string) ($item['unit'] ?? '');
+                $name = (string) ($item['name'] ?? '');
+                $html .= $buildStructuredLi($post_id, $qtyRaw, $unitRaw, $name);
+            }
+            $html .= '</ul>';
+        }
+    } elseif (!$use_fallback && !empty($ingredients)) {
+        $html .= '<h3>Zutaten</h3>';
+        $html .= '<ul class="sitc-ingredients" data-base-servings="' . esc_attr((string)$yield_num) . '">';
+        $displayIngredients = function_exists('sitc_merge_ingredients_for_display')
+            ? sitc_merge_ingredients_for_display($ingredients)
+            : $ingredients;
+        foreach ($displayIngredients as $ing) {
+            $qtyRaw = (string) ($ing['qty'] ?? '');
+            $unitRaw = (string) ($ing['unit'] ?? '');
+            $name = (string) ($ing['name'] ?? '');
+            $html .= $buildStructuredLi($post_id, $qtyRaw, $unitRaw, $name);
+        }
+        $html .= '</ul>';
+
+        $html .= '<div id="sitc-list-' . (int)$post_id . '" class="sitc-grocery collapsed" hidden>';
+        $html .= '<h4>Einkaufsliste</h4>';
+        $html .= '<ul>';
+        $groceryIngredients = function_exists('sitc_merge_ingredients_for_display')
+            ? sitc_merge_ingredients_for_display($ingredients)
+            : $ingredients;
+        foreach ($groceryIngredients as $ing) {
+            $qtyRaw = $ing['qty'] ?? '';
+            $unitRaw = $ing['unit'] ?? '';
+            $name = $ing['name'] ?? '';
+            $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
+            $qInfo = function_exists('sitc_parse_qty_or_range_v2')
+                ? sitc_parse_qty_or_range_v2($qtyRaw)
+                : sitc_parse_qty_or_range($qtyRaw);
+            if (!is_array($qInfo)) {
+                $qInfo = ['isRange' => false, 'low' => null, 'high' => null];
+            }
+            if (!empty($qInfo['isRange'])) {
+                $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
+            } elseif ($qInfo['low'] !== null) {
+                $dispQty = sitc_format_qty_display($qInfo['low']);
+            } else {
+                $v = sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
+                $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
+            }
+            $unitDe = sitc_unit_to_de($unitRaw);
+            $line = trim(($dispQty !== '' ? $dispQty . ' ' : '') . ($unitDe ? $unitDe . ' ' : '') . $nameDisp);
+            $html .= '<li>' . esc_html($line) . '</li>';
+        }
+        $html .= '</ul>';
+        $html .= '</div>';
+    } else {
+        $resolvedRaw = array_values(array_filter(array_map('trim', $rawLines), static function ($s) {
+            return $s !== '';
+        }));
+
+        if (empty($resolvedRaw)) {
             $schema_json = get_post_meta($post_id, '_sitc_schema_recipe_json', true);
             if (is_string($schema_json) && $schema_json !== '') {
                 $schema = json_decode($schema_json, true);
                 if (is_array($schema) && !empty($schema['recipeIngredient'])) {
-                    $src = $schema['recipeIngredient'];
-                    if (!is_array($src)) { $src = [$src]; }
-                    foreach ($src as $s) {
-                        $t = trim((string)$s);
-                        if ($t !== '') $rawLines[] = $t;
+                    $source = $schema['recipeIngredient'];
+                    if (!is_array($source)) {
+                        $source = [$source];
+                    }
+                    foreach ($source as $entry) {
+                        $text = trim((string)$entry);
+                        if ($text !== '') {
+                            $resolvedRaw[] = $text;
+                        }
                     }
                 }
             }
-            if (!$rawLines && !empty($ingredients)) {
-                foreach ((array)$ingredients as $ing) {
-                    $qty  = trim((string)($ing['qty'] ?? ''));
-                    $unit = trim((string)($ing['unit'] ?? ''));
-                    $name = trim((string)($ing['name'] ?? ''));
-                    $line = trim(($qty !== '' ? $qty.' ' : '') . ($unit !== '' ? $unit.' ' : '') . $name);
-                    if ($line !== '') $rawLines[] = $line;
+        }
+
+        if (empty($resolvedRaw) && !empty($ingredients)) {
+            foreach ((array)$ingredients as $ing) {
+                $qty = trim((string) ($ing['qty'] ?? ''));
+                $unit = trim((string) ($ing['unit'] ?? ''));
+                $name = trim((string) ($ing['name'] ?? ''));
+                $line = trim(($qty !== '' ? $qty . ' ' : '') . ($unit !== '' ? $unit . ' ' : '') . $name);
+                if ($line !== '') {
+                    $resolvedRaw[] = $line;
                 }
             }
-            $rawLines = array_values(array_filter(array_map('trim', (array)$rawLines), function($s){ return $s !== ''; }));
-        ?>
-        <?php if (!empty($rawLines)) : ?>
-            <h3>Zutaten</h3>
-            <ul class="sitc-ingredients" data-base-servings="<?php echo esc_attr($yield_num); ?>">
-                <?php foreach ($rawLines as $line):
-                    sitc_render_ingredient_li_from_raw($post_id, (string)$line);
-                endforeach; ?>
-            </ul>
-        <?php endif; ?>
-    <?php endif;
-    return (string)ob_get_clean();
-}
+        }
 
-// Centralized renderer for one ingredient li from structured fields
-function sitc_render_ingredient_li(int $post_id, string $qtyRaw, string $unitRaw, string $name): void {
-    $nameDisp = sitc_cased_de_ingredient(trim((string)$name));
-    $qInfo   = function_exists('sitc_parse_qty_or_range_v2') ? sitc_parse_qty_or_range_v2($qtyRaw) : sitc_parse_qty_or_range($qtyRaw);
-    if ($qInfo['isRange']) {
-        $dispQty = sitc_format_qty_display($qInfo['low']) . '&ndash;' . sitc_format_qty_display($qInfo['high']);
-    } elseif ($qInfo['low'] !== null) {
-        $dispQty = sitc_format_qty_display($qInfo['low']);
-    } else {
-        $v = function_exists('sitc_coerce_qty_float_v2') ? sitc_coerce_qty_float_v2((string)$qtyRaw) : sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
-        $dispQty = ($v !== null) ? sitc_format_qty_display($v) : '';
-    }
-    $unitDe  = sitc_unit_to_de($unitRaw);
-    $id_for  = 'sitc_chk_' . $post_id . '_' . md5($qtyRaw.'|'.$unitRaw.'|'.$name);
-    ?>
-    <li class="sitc-ingredient"
-        <?php if ($qInfo['isRange']): ?>
-            data-qty-low="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['low'])); ?>"
-            data-qty-high="<?php echo esc_attr(str_replace(',','.', (string)$qInfo['high'])); ?>"
-        <?php else: ?>
-            <?php
-                $dataQtyVal = $qInfo['low'];
-                if ($dataQtyVal === null) {
-                    $v2 = function_exists('sitc_coerce_qty_float_v2') ? sitc_coerce_qty_float_v2((string)$qtyRaw) : sitc_coerce_qty_float(sitc_qty_pre_normalize((string)$qtyRaw));
-                    if ($v2 !== null) $dataQtyVal = (float)$v2;
-                }
-            ?>
-            data-qty="<?php echo esc_attr($dataQtyVal !== null ? str_replace(',','.', (string)$dataQtyVal) : ''); ?>"
-        <?php endif; ?>
-        data-unit="<?php echo esc_attr($unitDe); ?>" data-name="<?php echo esc_attr($name); ?>">
-        <label for="<?php echo esc_attr($id_for); ?>">
-            <input type="checkbox" id="<?php echo esc_attr($id_for); ?>" class="sitc-chk">
-            <span class="sitc-line">
-                <span class="sitc-qty"><?php echo esc_html($dispQty); ?></span>
-                <?php if ($unitDe !== ''): ?><span class="sitc-unit"> <?php echo esc_html($unitDe); ?></span><?php endif; ?>
-                <span class="sitc-name"> <?php echo esc_html($nameDisp); ?></span>
-            </span>
-        </label>
-    </li>
-    <?php
-}
+        $resolvedRaw = array_values(array_filter(array_map('trim', $resolvedRaw), static function ($s) {
+            return $s !== '';
+        }));
 
-// Render li from a raw source line via central pipeline
-function sitc_render_ingredient_li_from_raw(int $post_id, string $line): void {
-    $raw = sitc_text_sanitize((string)$line);
-    if (function_exists('sitc_parse_ingredient_line_v3')) {
-        $p = sitc_parse_ingredient_line_v3($raw);
-    } else {
-        $p = sitc_parse_ingredient_line_v2($raw);
-    }
-    $name = trim((string)($p['item'] ?? ''));
-    $note = trim((string)($p['note'] ?? ''));
-    if ($note !== '') $name .= ' (' . $note . ')';
-    $qtyRaw = isset($p['qty']) ? (string)$p['qty'] : '';
-    if ($qtyRaw === '' || $qtyRaw === null) {
-        if (function_exists('sitc_extract_leading_qty_token_v2')) {
-            $lead = sitc_extract_leading_qty_token_v2($raw);
-            if ($lead !== '') $qtyRaw = $lead;
+        if (!empty($resolvedRaw)) {
+            $html .= '<h3>Zutaten</h3>';
+            $html .= '<ul class="sitc-ingredients" data-base-servings="' . esc_attr((string)$yield_num) . '">';
+            foreach ($resolvedRaw as $line) {
+                $html .= $buildRawLi($post_id, (string)$line);
+            }
+            $html .= '</ul>';
         }
     }
-    $unitRaw = isset($p['unit']) ? (string)$p['unit'] : '';
-    sitc_render_ingredient_li($post_id, $qtyRaw, $unitRaw, $name);
+
+    return $html;
 }

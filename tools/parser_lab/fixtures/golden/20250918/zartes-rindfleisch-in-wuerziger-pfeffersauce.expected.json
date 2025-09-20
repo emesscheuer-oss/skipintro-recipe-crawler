@@ -1,0 +1,143 @@
+{
+  "cases": [
+    {
+      "line": "300 g Rindfleisch",
+      "qty": 300,
+      "unit": "g",
+      "item": "Rindfleisch",
+      "note": null
+    },
+    {
+      "line": "5 EL Helle Sojasauce",
+      "qty": 5,
+      "unit": "EL",
+      "item": "Helle Sojasauce",
+      "note": null
+    },
+    {
+      "line": "1 tsp Natron (Gestrichener TL)",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Natron",
+      "note": "Gestrichener TL"
+    },
+    {
+      "line": "1 tbsp Speisestärke",
+      "qty": 1,
+      "unit": "EL",
+      "item": "Speisestärke",
+      "note": null
+    },
+    {
+      "line": "0.5 tsp Weißer Pfeffer",
+      "qty": 0.5,
+      "unit": "TL",
+      "item": "Weißer Pfeffer",
+      "note": null
+    },
+    {
+      "line": "0.25 tsp Salz",
+      "qty": 0.25,
+      "unit": "TL",
+      "item": "Salz",
+      "note": null
+    },
+    {
+      "line": "1 Prise Zucker",
+      "qty": 1,
+      "unit": "pinch",
+      "item": "Zucker",
+      "note": null
+    },
+    {
+      "line": "1 tbsp Lee Kum Kee Black Pepper Sauce",
+      "qty": 1,
+      "unit": "EL",
+      "item": "Lee Kum Kee Black Pepper Sauce",
+      "note": null
+    },
+    {
+      "line": "80 ml Geflügelfond",
+      "qty": 80,
+      "unit": "ml",
+      "item": "Geflügelfond",
+      "note": null
+    },
+    {
+      "line": "1 tbsp Helle Sojasauce",
+      "qty": 1,
+      "unit": "EL",
+      "item": "Helle Sojasauce",
+      "note": null
+    },
+    {
+      "line": "1 tbsp Austernsauce",
+      "qty": 1,
+      "unit": "EL",
+      "item": "Austernsauce",
+      "note": null
+    },
+    {
+      "line": "1 tbsp Shaoxing Reiswein",
+      "qty": 1,
+      "unit": "EL",
+      "item": "Shaoxing Reiswein",
+      "note": null
+    },
+    {
+      "line": "1 tbsp Zucker",
+      "qty": 1,
+      "unit": "EL",
+      "item": "Zucker",
+      "note": null
+    },
+    {
+      "line": "0.5 tsp Schwarzer Pfeffer",
+      "qty": 0.5,
+      "unit": "TL",
+      "item": "Schwarzer Pfeffer",
+      "note": null
+    },
+    {
+      "line": "1 Rote Paprikaschote",
+      "qty": 1,
+      "unit": "Stück",
+      "item": "Paprikaschote",
+      "note": "rot"
+    },
+    {
+      "line": "2 Zwiebeln",
+      "qty": 2,
+      "unit": "Stück",
+      "item": "Zwiebel",
+      "note": null
+    },
+    {
+      "line": "2 Frühlingszwiebeln",
+      "qty": 2,
+      "unit": "Stück",
+      "item": "Frühlingszwiebel",
+      "note": null
+    },
+    {
+      "line": "30 g Ingwer",
+      "qty": 30,
+      "unit": "g",
+      "item": "Ingwer",
+      "note": null
+    },
+    {
+      "line": "2 Portionen Gekochter Reis",
+      "item": "Gekochter Reis",
+      "note": null
+    },
+    {
+      "line": "3-4 tbsp Pflanzenöl",
+      "min_qty": 3,
+      "max_qty": 4,
+      "unit": "EL",
+      "item": "Pflanzenöl",
+      "note": null
+    }
+  ]
+}

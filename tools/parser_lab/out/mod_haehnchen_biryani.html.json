@@ -1,0 +1,61 @@
+[
+    {
+        "raw": "½ Bund Koriander, gehackt",
+        "qty": null,
+        "unit": null,
+        "item": "½ Bund Koriander",
+        "note": "gehackt"
+    },
+    {
+        "raw": "2–3 Nelken",
+        "qty": {
+            "low": 2,
+            "high": 3
+        },
+        "unit": "piece",
+        "item": "Nelken",
+        "note": null
+    },
+    {
+        "raw": "200 g Reis",
+        "qty": 200,
+        "unit": "g",
+        "item": "Reis",
+        "note": null
+    },
+    {
+        "raw": "1\/2 Zwiebel",
+        "qty": 0.5,
+        "unit": "piece",
+        "item": "Zwiebel",
+        "note": null
+    },
+    {
+        "raw": "1 1\/2 TL Kreuzkümmel",
+        "qty": 1.5,
+        "unit": "tsp",
+        "item": "Kreuzkümmel",
+        "note": null
+    },
+    {
+        "raw": "Reis waschen.",
+        "qty": null,
+        "unit": null,
+        "item": "Reis waschen",
+        "note": null
+    },
+    {
+        "raw": "Gewürze anrösten, Hähnchen zugeben.",
+        "qty": null,
+        "unit": null,
+        "item": "Gewürze anrösten, Hähnchen zugeben",
+        "note": null
+    },
+    {
+        "raw": "Gar ziehen lassen.",
+        "qty": null,
+        "unit": null,
+        "item": "Gar ziehen lassen",
+        "note": null
+    }
+]

@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 if (!defined('ABSPATH')) exit;
 
@@ -35,7 +34,7 @@ function sitc_unit_to_de($unit) {
         'tsp' => 'TL', 'teaspoon' => 'TL', 'teaspoons' => 'TL', 'tl' => 'TL',
         'tbsp' => 'EL', 'tablespoon' => 'EL', 'tablespoons' => 'EL', 'el' => 'EL',
         'cup' => 'Tasse', 'cups' => 'Tasse', 'tasse' => 'Tasse',
-        'piece' => 'Stück', 'pieces' => 'Stück', 'stueck' => 'Stück', 'stück' => 'Stück',
+        'piece' => 'StÃƒÂ¼ck', 'pieces' => 'StÃƒÂ¼ck', 'stueck' => 'StÃƒÂ¼ck', 'stÃƒÂ¼ck' => 'StÃƒÂ¼ck',
         'pinch' => 'Prise', 'prisen' => 'Prise', 'prise' => 'Prise',
         'can' => 'Dose', 'dose' => 'Dose',
         'bunch' => 'Bund', 'bund' => 'Bund',

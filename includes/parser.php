@@ -1,5 +1,12 @@
 <?php
+declare(strict_types=1);
 if (!defined('ABSPATH')) exit;
+
+// Ingredient parser version (for cache invalidation of stored structured ingredients)
+if (!defined('SITC_ING_PARSER_VERSION')) {
+    // Bump when Qty/Unit parsing changes that should refresh stored meta
+    define('SITC_ING_PARSER_VERSION', '2.0.0-qty1');
+}
 
 // --- SITC modular includes (guarded)
 // Load lazily and safely; modules must declare(strict_types=1) at line 1, no BOM/output.
@@ -15,7 +22,7 @@ $__sitc_helpers = __DIR__ . '/parser_helpers.php';
 if (is_file($__sitc_helpers)) {
     require_once $__sitc_helpers;
 }
-// Ingredients adapter (E1) — loaded for modular path behind feature flag
+// Ingredients adapter (E1) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â loaded for modular path behind feature flag
 $__sitc_ing_adapter = __DIR__ . '/ingredients/parse_line.php';
 if (is_file($__sitc_ing_adapter)) {
     require_once $__sitc_ing_adapter;
@@ -33,12 +40,19 @@ function sitc_set_ing_engine(string $engine): void {
 // Read current engine; resolves 'auto' using SITC_ING_V2
 if (!function_exists('sitc_get_ing_engine')) {
 function sitc_get_ing_engine(): string {
-    $engine = function_exists('sitc_get_ing_engine') ? sitc_get_ing_engine() : ($GLOBALS['SITC_ING_ENGINE'] ?? 'auto');
+    $engine = $GLOBALS['SITC_ING_ENGINE'] ?? 'auto';
     if ($engine === 'auto') {
         $useV2 = (defined('SITC_ING_V2') && SITC_ING_V2 === true);
         return $useV2 ? 'mod' : 'legacy';
     }
     return in_array($engine, ['legacy','mod'], true) ? $engine : 'legacy';
+}
+}
+
+// Accessor for ingredient parser version constant
+if (!function_exists('sitc_get_ing_parser_version')) {
+function sitc_get_ing_parser_version(): string {
+    return defined('SITC_ING_PARSER_VERSION') ? (string)SITC_ING_PARSER_VERSION : '0.0.0';
 }
 }
 
@@ -74,9 +88,39 @@ function sitc_ing_parse_line_mux(string $line, string $locale = 'de'): ?array {
     $engine = $GLOBALS['SITC_ING_ENGINE'] ?? 'auto';
     if ($engine === 'legacy') return (array)sitc_parse_ingredient_line_legacy($raw, $locale);
     if ($engine === 'mod')    return (array)sitc_ing_parse_line_mod($raw, $locale);
-    // auto → follow feature flag default
+    // auto ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ follow feature flag default
     $useV2 = (defined('SITC_ING_V2') && SITC_ING_V2 === true);
-    return $useV2 ? (array)sitc_ing_parse_line_mod($raw, $locale) : (array)sitc_parse_ingredient_line_legacy($raw, $locale);
+    if (!$useV2) return (array)sitc_parse_ingredient_line_legacy($raw, $locale);
+    try {
+        $mod = (array)sitc_ing_parse_line_mod($raw, $locale);
+        $qtyEmpty  = !isset($mod['qty']) || $mod['qty'] === null || $mod['qty'] === '';
+        $unitEmpty = !isset($mod['unit']) || $mod['unit'] === null || $mod['unit'] === '';
+        $item      = isset($mod['item']) ? trim((string)$mod['item']) : '';
+        $rawStr    = isset($mod['raw']) ? trim((string)$mod['raw']) : $raw;
+        $looksRaw  = ($item === '' || mb_strtolower($item,'UTF-8') === mb_strtolower($rawStr,'UTF-8'));
+        if (($qtyEmpty && $unitEmpty && $looksRaw) || (isset($mod['_diag']) && $mod['_diag'] === 'mod_not_loaded')) {
+            if (function_exists('sitc_parser_debug_log')) {
+                sitc_parser_debug_log([
+                    'engine' => 'auto',
+                    'message' => 'auto_fallback_low_quality',
+                    'phase' => 'unknown',
+                    'fallback_triggered' => true,
+                ]);
+            }
+            return (array)sitc_parse_ingredient_line_legacy($raw, $locale);
+        }
+        return $mod;
+    } catch (Throwable $e) {
+        if (function_exists('sitc_parser_debug_log')) {
+            sitc_parser_debug_log([
+                'engine' => 'auto',
+                'exception' => get_class($e) . ': ' . $e->getMessage(),
+                'phase' => 'unknown',
+                'fallback_triggered' => true,
+            ]);
+        }
+        return (array)sitc_parse_ingredient_line_legacy($raw, $locale);
+    }
 }
 }
 
@@ -88,7 +132,7 @@ function sitc_ing_parse_line_mux(string $line, string $locale = 'de'): ?array {
 function sitc_parse_recipe_from_url($url) {
     $response = wp_remote_get($url, ['timeout' => 20]);
     if (is_wp_error($response)) {
-        error_log("SITC Parser: Fehler beim Abruf von $url ÔåÆ " . $response->get_error_message());
+        error_log("SITC Parser: Fehler beim Abruf von $url ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â¥ÃƒÆ’Ã¢â‚¬Â  " . $response->get_error_message());
         return null;
     }
     $html = wp_remote_retrieve_body($response);
@@ -114,7 +158,7 @@ function sitc_parse_recipe_from_url($url) {
             $json = json_decode(trim($block), true);
             if (!$json) continue;
 
-            // @graph? ÔåÆ einzelnes Recipe extrahieren
+            // @graph? ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â¥ÃƒÆ’Ã¢â‚¬Â  einzelnes Recipe extrahieren
             if (isset($json['@graph'])) {
                 foreach ($json['@graph'] as $node) {
                     if (isset($node['@type']) && in_array('Recipe', (array)$node['@type'])) {
@@ -153,7 +197,7 @@ function sitc_parse_recipe_from_url($url) {
     }
 
     // --- 2. Fallback: HTML Scraping ---
-    error_log("SITC Parser: Kein g├╝ltiges JSON-LD gefunden ÔåÆ Fallback HTML bei $url");
+    error_log("SITC Parser: Kein gÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬Â¢Ã‚Âltiges JSON-LD gefunden ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â¥ÃƒÆ’Ã¢â‚¬Â  Fallback HTML bei $url");
 
     // Zutaten
     if (preg_match_all('/<li[^>]*>(.*?)<\/li>/is', $html, $matches)) {
@@ -207,7 +251,9 @@ function parseRecipe(string $html, ?string $pageUrl = null): array {
     $domFallback = sitc_extract_dom_fallback($dom, $scopeSelectors, $excludeSelectors, $pageUrl);
 
     // 4) Merge with priority JSON-LD > Microdata > DOM
-    [$merged, $sources] = sitc_merge_with_priority($jsonldCandidates, $micro, $domFallback);
+    $mergeResult = sitc_merge_with_priority($jsonldCandidates, $micro, $domFallback);
+    $merged = isset($mergeResult[0]) ? $mergeResult[0] : [];
+    $sources = isset($mergeResult[1]) ? $mergeResult[1] : [];
 
     // 5) Normalize
     $normalized = sitc_normalize_recipe($merged, $dom, $pageUrl);
@@ -230,10 +276,10 @@ function parseRecipe(string $html, ?string $pageUrl = null): array {
 /**
  * Wrapper: fetch URL and return legacy + rich meta using parseRecipe()
  */
-function sitc_parse_recipe_from_url_v2(string $url) {
+function sitc_parse_recipe_from_url_v2(string $url, array $args = []) {
     $response = wp_remote_get($url, ['timeout' => 20]);
     if (is_wp_error($response)) {
-        error_log("SITC Parser: Fehler beim Abruf von $url ÔÇô " . $response->get_error_message());
+        error_log("SITC Parser: Fehler beim Abruf von $url ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã‚Â´ " . $response->get_error_message());
         return null;
     }
     $html = wp_remote_retrieve_body($response);
@@ -242,7 +288,17 @@ function sitc_parse_recipe_from_url_v2(string $url) {
         return null;
     }
 
+    // Optional engine override via args['engine'] (auto|mod|legacy); query override handled globally
+    $allowedEng = ['auto','mod','legacy'];
+    $prevEngine = $GLOBALS['SITC_ING_ENGINE'] ?? 'auto';
+    $argEngine = isset($args['engine']) ? strtolower((string)$args['engine']) : '';
+    if (in_array($argEngine, $allowedEng, true) && function_exists('sitc_set_ing_engine')) {
+        sitc_set_ing_engine($argEngine);
+    }
+
     $result = parseRecipe($html, $url);
+    // Restore engine
+    if (function_exists('sitc_set_ing_engine')) sitc_set_ing_engine($prevEngine);
     $r = $result['recipe'] ?? [];
 
     $image = '';
@@ -282,7 +338,7 @@ function sitc_parse_recipe_from_url_v2(string $url) {
         }
     }
 
-    // De-Dupe final structured list (case-/diacritics-/whitespace-insensitiv ├╝ber die kombinierte Zeile)
+    // De-Dupe final structured list (case-/diacritics-/whitespace-insensitiv ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬Â¢Ã‚Âber die kombinierte Zeile)
     if (!empty($ingredients_struct)) {
         $seen = [];
         $uniq = [];
@@ -320,6 +376,8 @@ function sitc_parse_recipe_from_url_v2(string $url) {
             'sources'       => $result['sources'] ?? [],
             'confidence'    => $result['confidence'] ?? 0.0,
             'flags'         => $result['flags'] ?? ['isPartial'=>false,'lowConfidence'=>false],
+            'engine_used'    => function_exists('sitc_get_ing_engine') ? sitc_get_ing_engine() : ($GLOBALS['SITC_ING_ENGINE'] ?? 'auto'),
+            'fallback_triggered' => false,
         ],
     ];
 }
@@ -564,7 +622,7 @@ function sitc_extract_dom_fallback(DOMDocument $doc, array $scopeSelectors, arra
             $text = trim(preg_replace('/\s+/', ' ', $node->textContent ?? ''));
             if ($text === '') continue;
             // Heading-like nodes indicate group
-            if (in_array($tag, ['h2','h3','h4','h5']) || preg_match('/^([A-Z├ä├û├£][A-Z├ä├û├£\s\-]{2,30}|.*?:)$/u', $text)) {
+            if (in_array($tag, ['h2','h3','h4','h5']) || preg_match('/^([A-ZÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã‚Â¤ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã‚Â»ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒâ€šÃ‚Â£][A-ZÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã‚Â¤ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã‚Â»ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒâ€šÃ‚Â£\s\-]{2,30}|.*?:)$/u', $text)) {
                 $name = rtrim($text, ':');
                 $currentGroup = $name;
                 if (!isset($groups[$currentGroup])) $groups[$currentGroup] = [];
@@ -651,7 +709,7 @@ function sitc_merge_with_priority(array $jsonldCandidates, array $micro, array $
     }
 
     // url will be resolved during normalization via canonical
-    return [$merged, $sources];
+    return array($merged, $sources);
 }
 
 function sitc_normalize_recipe(array $recipe, DOMDocument $doc, ?string $pageUrl): array {
@@ -859,7 +917,7 @@ function sitc_parse_duration(string $txt): ?string {
         'sekunden'=>'s','sekunde'=>'s','sec'=>'s','s'=>'s','seconds'=>'s'
     ];
     // Normalize digits and fractions
-    $t = strtr($t, ['┬¢'=>' 1/2','┬╝'=>' 1/4','┬¥'=>' 3/4']);
+    $t = strtr($t, ['ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¢'=>' 1/2','ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â'=>' 1/4','ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¥'=>' 3/4']);
     // Extract hours/minutes/seconds from patterns like "1 h 40 m", "1 hour, 40 minutes", "1 std 15 min"
     $h=$m=$s=0.0;
     // Try explicit units
@@ -892,7 +950,14 @@ function sitc_duration_sum(?string $isoA, ?string $isoB): ?string {
         if (!preg_match('/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/', $iso, $m)) return [0,0,0];
         return [ (int)($m[1]??0), (int)($m[2]??0), (int)($m[3]??0) ];
     };
-    [$h1,$m1,$s1] = $parse($isoA); [$h2,$m2,$s2] = $parse($isoB);
+    $partsA = $parse($isoA);
+    $partsB = $parse($isoB);
+    $h1 = isset($partsA[0]) ? (int)$partsA[0] : 0;
+    $m1 = isset($partsA[1]) ? (int)$partsA[1] : 0;
+    $s1 = isset($partsA[2]) ? (int)$partsA[2] : 0;
+    $h2 = isset($partsB[0]) ? (int)$partsB[0] : 0;
+    $m2 = isset($partsB[1]) ? (int)$partsB[1] : 0;
+    $s2 = isset($partsB[2]) ? (int)$partsB[2] : 0;
     $h=$h1+$h2; $m=$m1+$m2; $s=$s1+$s2;
     $m += intdiv($s,60); $s = $s % 60;
     $h += intdiv($m,60); $m = $m % 60;
@@ -905,7 +970,7 @@ function sitc_parse_yield_normalized(string $raw): array {
     if ($raw === '') return ['count'=>null,'unit'=>null];
     // Extract number possibly range "2-3"
     $cnt = null;
-    if (preg_match('/(\d+(?:[.,]\d+)?)(?:\s*[-ÔÇô]\s*(\d+(?:[.,]\d+)?))?/u', $raw, $m)) {
+    if (preg_match('/(\d+(?:[.,]\d+)?)(?:\s*[-ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã‚Â´]\s*(\d+(?:[.,]\d+)?))?/u', $raw, $m)) {
         $cnt = sitc_to_float($m[1]);
     }
     $unit = null;
@@ -942,7 +1007,7 @@ function sitc_flatten_instructions($instr): array {
             }
         }
     } elseif (is_string($instr)) {
-        $parts = preg_split('/\r?\n|\.\s+(?=[A-Z├ä├û├£])/u', $instr);
+        $parts = preg_split('/\r?\n|\.\s+(?=[A-ZÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã‚Â¤ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã‚Â»ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒâ€šÃ‚Â£])/u', $instr);
         if ($parts === false) { trigger_error('Regex failed @sitc_flatten_instructions preg_split', E_USER_WARNING); $parts = [$instr]; }
         if ($parts === false) { trigger_error('Regex failed @sitc_flatten_instructions preg_split', E_USER_WARNING); $parts = [$instr]; }
         foreach ($parts as $p) { $t = sitc_clean_text($p); if ($t!=='') $out[] = ['@type'=>'HowToStep','text'=>$t]; }
@@ -988,9 +1053,9 @@ function sitc_text_sanitize($val): string {
     $s = sitc_nfc($s);
     // 3) Mojibake fixes (common pairs)
     $map = [
-        'StÃ¼ck' => 'Stück', 'Ã¼' => 'ü', 'Ã¶' => 'ö', 'Ã¤' => 'ä', 'ÃŸ' => 'ß',
-        'Ã„' => 'Ä', 'Ã–' => 'Ö', 'Ãœ' => 'Ü',
-        'â€“' => '–', 'â€”' => '—', 'â€ž' => '„', 'â€œ' => '“', 'â€˜' => '‚', 'â€™' => '’', 'â€¦' => '…'
+        'StÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼ck' => 'StÃƒÆ’Ã‚Â¼ck', 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼' => 'ÃƒÆ’Ã‚Â¼', 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¶' => 'ÃƒÆ’Ã‚Â¶', 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¤' => 'ÃƒÆ’Ã‚Â¤', 'ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â¸' => 'ÃƒÆ’Ã…Â¸',
+        'ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾' => 'ÃƒÆ’Ã¢â‚¬Å¾', 'ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“' => 'ÃƒÆ’Ã¢â‚¬â€œ', 'ÃƒÆ’Ã†â€™Ãƒâ€¦Ã¢â‚¬Å“' => 'ÃƒÆ’Ã…â€œ',
+        'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ' => 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“', 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â' => 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â', 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾' => 'ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾', 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“' => 'ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ', 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¹Ã…â€œ' => 'ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡', 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢' => 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦' => 'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦'
     ];
     $s = strtr($s, $map);
     // 4) Strip tags and collapse whitespace
@@ -1006,12 +1071,12 @@ function sitc_text_sanitize($val): string {
 
 function sitc_unicode_fraction_decimal_map(): array {
     return [
-        '¼' => 0.25,
-        '½' => 0.5,
-        '¾' => 0.75,
-        '⅓' => 1/3,
-        '⅔' => 2/3,
-        '⅛' => 0.125,
+        'Ãƒâ€šÃ‚Â¼' => 0.25,
+        'Ãƒâ€šÃ‚Â½' => 0.5,
+        'Ãƒâ€šÃ‚Â¾' => 0.75,
+        'ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Å“' => 1/3,
+        'ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Â' => 2/3,
+        'ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Âº' => 0.125,
     ];
 }
 
@@ -1022,7 +1087,7 @@ function sitc_qty_pre_normalize_parser(string $s): string {
     // NBSP / NNBSP to space
     $t = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $t);
     // drop leading stopwords and (ca.) suffix
-    $t = preg_replace('/^(ca\.?|circa|etwa|ungef\.?|ungef(?:ae|ä)hr\.?|about|approx\.?|approximately)\s+/iu', '', $t);
+    $t = preg_replace('/^(ca\.?|circa|etwa|ungef\.?|ungef(?:ae|ÃƒÆ’Ã‚Â¤)hr\.?|about|approx\.?|approximately)\s+/iu', '', $t);
     $t = preg_replace('/\((?:ca\.?|circa|about|approx\.?)\)\s*$/iu', '', $t);
     // unify range separators
     $t = preg_replace('/[\x{2012}-\x{2015}]/u', '-', $t);
@@ -1030,7 +1095,7 @@ function sitc_qty_pre_normalize_parser(string $s): string {
     $t = preg_replace('/\s*\/\s*/u', '/', $t);
     // unicode fractions to decimals or mixed numbers
     $map = sitc_unicode_fraction_decimal_map();
-    // mixed number: 1½ -> 1 + 0.5
+    // mixed number: 1Ãƒâ€šÃ‚Â½ -> 1 + 0.5
     $t = preg_replace_callback('/(\d)\s*(['.preg_quote(implode('', array_keys($map)), '/').'])/u', function($m) use ($map){
         $dec = $map[$m[2]] ?? null; if ($dec === null) return $m[0];
         $sum = (float)$m[1] + (float)$dec;
@@ -1059,7 +1124,7 @@ function sitc_qty_to_float(string $num): ?float {
 if (!function_exists('sitc_parse_qty_or_range_parser')) {
 function sitc_parse_qty_or_range_parser(string $s) {
     $t = sitc_qty_pre_normalize_parser($s);
-    // range a–b (minus or unicode dashes)
+    // range aÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“b (minus or unicode dashes)
     if (preg_match('/^(\S+)\h*[\-\x{2012}-\x{2015}]\h*(\S+)$/u', $t, $m)) {
         $a = sitc_qty_from_token($m[1]);
         $b = sitc_qty_from_token($m[2]);
@@ -1078,16 +1143,16 @@ function sitc_unit_alias_canonical(string $u): ?string {
         'kg'=>'kg',
         'ml'=>'ml','milliliter'=>'ml','millilitre'=>'ml',
         'l'=>'l','liter'=>'l','litre'=>'l',
-        'tl'=>'tsp','teeloeffel'=>'tsp','teelöffel'=>'tsp','tsp'=>'tsp','teaspoon'=>'tsp','teaspoons'=>'tsp',
-        'el'=>'tbsp','essloeffel'=>'tbsp','esslöffel'=>'tbsp','tbsp'=>'tbsp','tablespoon'=>'tbsp','tablespoons'=>'tbsp',
+        'tl'=>'tsp','teeloeffel'=>'tsp','teelÃƒÆ’Ã‚Â¶ffel'=>'tsp','tsp'=>'tsp','teaspoon'=>'tsp','teaspoons'=>'tsp',
+        'el'=>'tbsp','essloeffel'=>'tbsp','esslÃƒÆ’Ã‚Â¶ffel'=>'tbsp','tbsp'=>'tbsp','tablespoon'=>'tbsp','tablespoons'=>'tbsp',
         'tasse'=>'cup','cup'=>'cup','cups'=>'cup',
         'prise'=>'pinch','pinch'=>'pinch',
-        'stueck'=>'piece','stück'=>'piece','piece'=>'piece','pieces'=>'piece',
+        'stueck'=>'piece','stÃƒÆ’Ã‚Â¼ck'=>'piece','piece'=>'piece','pieces'=>'piece',
         'bund'=>'bunch','bunch'=>'bunch',
         'zehe'=>'clove','zehen'=>'clove','clove'=>'clove','cloves'=>'clove'
     ];
     $k = mb_strtolower(trim($u), 'UTF-8');
-    if ($k === 'stk' || $k === 'stück') return 'piece';
+    if ($k === 'stk' || $k === 'stÃƒÆ’Ã‚Â¼ck') return 'piece';
     return $m[$k] ?? null;
 }
 }
@@ -1097,9 +1162,14 @@ function sitc_struct_from_line(string $rawLine): array {
     $out = [];
     $pn = sitc_qty_pre_normalize_parser($rawLine);
     // split into parts by multiple qty tokens or common separators
-    $parts = preg_split('/\s*[•;\u00B7]\s*|\s{2,}/u', $pn);
+    $parts = preg_split('/\s*[ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢;\u00B7]\s*|\s{2,}/u', $pn);
     if ($parts === false) { trigger_error('Regex failed @sitc_struct_from_line preg_split', E_USER_WARNING); $parts = [$pn]; }
-    $parts = array_values(array_filter(array_map('trim',$parts), fn($s)=>$s!==''));
+    $parts = array_values(array_filter(
+        array_map('trim', $parts),
+        function ($s) {
+            return $s !== '';
+        }
+    ));
     if (!$parts) $parts = [$pn];
     foreach ($parts as $part) {
         // If more than one qty token in part, split before subsequent ones
@@ -1136,9 +1206,9 @@ function sitc_struct_from_line(string $rawLine): array {
                     $parts2 = array_map('trim', explode(',', $itemField, 2));
                     if (count($parts2)===2) { $itemField = $parts2[0]; $noteField = trim(($noteField? $noteField.'; ':'').$parts2[1]); }
                 }
-                // Hyphen item-note like "Ingwer-Stück"
-                if ($noteField===null && preg_match('/^(.+?)\s*[-–]\s*(St(ue|ü)ck|gehackt|rot)\b/u', $itemField, $h)) {
-                    $itemField = trim($h[1]); $noteField = $h[3]=='Stück' || $h[3]=='Stueck' ? 'Stück' : $h[3];
+                // Hyphen item-note like "Ingwer-StÃƒÆ’Ã‚Â¼ck"
+                if ($noteField===null && preg_match('/^(.+?)\s*[-ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“]\s*(St(ue|ÃƒÆ’Ã‚Â¼)ck|gehackt|rot)\b/u', $itemField, $h)) {
+                    $itemField = trim($h[1]); $noteField = $h[3]=='StÃƒÆ’Ã‚Â¼ck' || $h[3]=='Stueck' ? 'StÃƒÆ’Ã‚Â¼ck' : $h[3];
                 }
                 // Heuristic: Knoblauchzehen -> unit clove + item Knoblauch
                 if ($unitField===null && preg_match('/^knoblauchzehen?\b/iu', $itemField)) { $unitField='clove'; $itemField='Knoblauch'; }
@@ -1227,10 +1297,10 @@ function sitc_qty_from_token(string $t): ?float {
     if ($s === null) $s = $t;
     // map unicode fractions
     $map = [
-        "½"=>0.5, "¼"=>0.25, "¾"=>0.75, "⅓"=>0.3333, "⅔"=>0.6667, "⅛"=>0.125,
+        "Ãƒâ€šÃ‚Â½"=>0.5, "Ãƒâ€šÃ‚Â¼"=>0.25, "Ãƒâ€šÃ‚Â¾"=>0.75, "ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Å“"=>0.3333, "ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Â"=>0.6667, "ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Âº"=>0.125,
     ];
-    // mixed number like 1½
-    if (preg_match('/^([0-9]+)\s*([½¼¾⅓⅔⅛])$/u', $s, $m)) {
+    // mixed number like 1Ãƒâ€šÃ‚Â½
+    if (preg_match('/^([0-9]+)\s*([Ãƒâ€šÃ‚Â½Ãƒâ€šÃ‚Â¼Ãƒâ€šÃ‚Â¾ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬ÂÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Âº])$/u', $s, $m)) {
         $base = (float)$m[1]; $frac = $map[$m[2]] ?? 0.0; return $base + (float)$frac;
     }
     // mixed number like 1 1/2
@@ -1238,7 +1308,7 @@ function sitc_qty_from_token(string $t): ?float {
         $a=(float)$m[1]; $b=(float)$m[2]; $c=max(1.0,(float)$m[3]); return $a + ($b/$c);
     }
     // simple unicode fraction
-    if (preg_match('/^([½¼¾⅓⅔⅛])$/u', $s, $m)) { return (float)($map[$m[1]] ?? 0.0); }
+    if (preg_match('/^([Ãƒâ€šÃ‚Â½Ãƒâ€šÃ‚Â¼Ãƒâ€šÃ‚Â¾ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬ÂÃƒÂ¢Ã¢â‚¬Â¦Ã¢â‚¬Âº])$/u', $s, $m)) { return (float)($map[$m[1]] ?? 0.0); }
     // simple a/b
     if (preg_match('/^([0-9]+)\/([0-9]+)$/u', $s, $m)) { return (float)$m[1] / max(1.0,(float)$m[2]); }
     // plain decimal
@@ -1253,22 +1323,22 @@ function sitc_parse_ingredient_line_v2(string $raw): array {
     // Additional normalization for unicode fractions and spaces
     if (function_exists('sitc_qty_pre_normalize')) { $raw = sitc_qty_pre_normalize($raw); }
     // map unicode fractions
-    $raw = strtr($raw, ['┬¢'=>' 1/2','┬╝'=>' 1/4','┬¥'=>' 3/4','Ôàô'=>' 1/3','Ôàö'=>' 2/3']);
+    $raw = strtr($raw, ['ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¢'=>' 1/2','ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â'=>' 1/4','ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¥'=>' 3/4','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‚Â´'=>' 1/3','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‚Â¶'=>' 2/3']);
     // Units mapping de<->en
     $aliases = [
-        'tl'=>'tsp','teel├Âffel'=>'tsp','teeloeffel'=>'tsp','tsp'=>'tsp',
-        'el'=>'tbsp','essl├Âffel'=>'tbsp','essloeffel'=>'tbsp','tbsp'=>'tbsp',
+        'tl'=>'tsp','teelÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã¢â‚¬Å¡ffel'=>'tsp','teeloeffel'=>'tsp','tsp'=>'tsp',
+        'el'=>'tbsp','esslÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã¢â‚¬Å¡ffel'=>'tbsp','essloeffel'=>'tbsp','tbsp'=>'tbsp',
         'tasse'=>'cup','cup'=>'cup','prise'=>'pinch','pinch'=>'pinch',
-        'st├╝ck'=>'piece','stueck'=>'piece','piece'=>'piece','dose'=>'can','can'=>'can',
+        'stÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬Â¢Ã‚Âck'=>'piece','stueck'=>'piece','piece'=>'piece','dose'=>'can','can'=>'can',
         'bund'=>'bunch','bunch'=>'bunch','g'=>'g','gramm'=>'g','kg'=>'kg','ml'=>'ml','l'=>'l','liter'=>'l',
         'oz'=>'oz','lb'=>'lb'
     ];
     // Pattern: qty unit item (note)
     $qty=null; $unit=null; $item=''; $note=null;
     $m = [];
-    if (preg_match('/^\s*(\d+(?:[.,]\d+)?|\d+\s*\/\s*\d+|\d+\s*[ÔÇô-]\s*\d+)\s*(\p{L}+)?\s*(.*)$/u', $raw, $m)) {
+    if (preg_match('/^\s*(\d+(?:[.,]\d+)?|\d+\s*\/\s*\d+|\d+\s*[ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã‚Â´-]\s*\d+)\s*(\p{L}+)?\s*(.*)$/u', $raw, $m)) {
         $qraw = $m[1];
-        if (preg_match('/(\d+)\s*[ÔÇô-]\s*(\d+)/', $qraw, $r)) $qraw = $r[1]; // take lower bound for ranges
+        if (preg_match('/(\d+)\s*[ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã‚Â´-]\s*(\d+)/', $qraw, $r)) $qraw = $r[1]; // take lower bound for ranges
         $qty = sitc_to_float($qraw);
         $u = mb_strtolower(trim($m[2] ?? ''), 'UTF-8');
         if ($u !== '') $unit = $aliases[$u] ?? $u;
@@ -1292,9 +1362,9 @@ function sitc_parse_yield_number($raw) {
     $raw = trim($raw);
 
     $fractions = [
-        '┬¢'=>'1/2','Ôàô'=>'1/3','Ôàö'=>'2/3',
-        '┬╝'=>'1/4','┬¥'=>'3/4',
-        'Ôàø'=>'1/8','Ôà£'=>'3/8','ÔàØ'=>'5/8','Ôà×'=>'7/8'
+        'ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¢'=>'1/2','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‚Â´'=>'1/3','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‚Â¶'=>'2/3',
+        'ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â'=>'1/4','ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¥'=>'3/4',
+        'ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‚Â¸'=>'1/8','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â Ãƒâ€šÃ‚Â£'=>'3/8','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‹Å“'=>'5/8','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã¢â‚¬â€'=>'7/8'
     ];
     $raw = strtr($raw, $fractions);
 
@@ -1308,7 +1378,7 @@ function sitc_parse_yield_number($raw) {
 }
 
 /**
- * Zutatenzeile parsen ÔåÆ [qty, unit, name]
+ * Zutatenzeile parsen ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â¥ÃƒÆ’Ã¢â‚¬Â  [qty, unit, name]
  */
 if (!function_exists('sitc_parse_ingredient_line')) {
 function sitc_parse_ingredient_line($raw) {
@@ -1331,7 +1401,7 @@ function sitc_parse_ingredient_line($raw) {
 }
 
 /**
- * Anleitungen parsen ÔÇô akzeptiert Text, Array, verschachtelt
+ * Anleitungen parsen ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã‚Â´ akzeptiert Text, Array, verschachtelt
  */
 function sitc_parse_instructions($input) {
     $steps = [];
@@ -1345,7 +1415,7 @@ function sitc_parse_instructions($input) {
             }
         }
     } elseif (is_string($input)) {
-        $parts = preg_split('/\r?\n|\.\s+(?=[A-Z├ä├û├£])/u', $input);
+        $parts = preg_split('/\r?\n|\.\s+(?=[A-ZÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã‚Â¤ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã‚Â»ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒâ€šÃ‚Â£])/u', $input);
         if ($parts === false) { trigger_error('Regex failed @sitc_parse_instructions preg_split', E_USER_WARNING); $parts = [$input]; }
         foreach ($parts as $p) {
             $p = trim($p);
@@ -1357,23 +1427,23 @@ function sitc_parse_instructions($input) {
 }
 
 // --- Enhanced ingredient line parser (v3) ---
-// Robust f├╝r Br├╝che/Dezimal, Bereiche a-b, gemischte Zahlen, Freitext-Heuristik ("Saft einer halben Zitrone")
+// Robust fÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬Â¢Ã‚Âr BrÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬Â¢Ã‚Âche/Dezimal, Bereiche a-b, gemischte Zahlen, Freitext-Heuristik ("Saft einer halben Zitrone")
 if (!function_exists('sitc_parse_ingredient_line_v3')) {
 function sitc_parse_ingredient_line_v3(string $raw): array {
     $orig = $raw;
     $raw = sitc_clean_text($raw);
     $raw = strtr($raw, [
-        '┬¢'=>' 1/2','┬╝'=>' 1/4','┬¥'=>' 3/4','Ôàô'=>' 1/3','Ôàö'=>' 2/3',
-        'Ôàø'=>' 1/8','Ôà£'=>' 3/8','ÔàØ'=>' 5/8','Ôà×'=>' 7/8',
-        'ÔÇô'=>'-','ÔÇö'=>'-'
+        'ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¢'=>' 1/2','ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â'=>' 1/4','ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¥'=>' 3/4','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‚Â´'=>' 1/3','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‚Â¶'=>' 2/3',
+        'ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‚Â¸'=>' 1/8','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â Ãƒâ€šÃ‚Â£'=>' 3/8','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã‹Å“'=>' 5/8','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã‚Â ÃƒÆ’Ã¢â‚¬â€'=>' 7/8',
+        'ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã‚Â´'=>'-','ÃƒÆ’Ã¢â‚¬ÂÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã‚Â¶'=>'-'
     ]);
     $raw = preg_replace('/\s*\/\s*/', '/', $raw);
 
     $aliases = [
-        'tl'=>'tsp','teel├Âffel'=>'tsp','teeloeffel'=>'tsp','tsp'=>'tsp',
-        'el'=>'tbsp','essl├Âffel'=>'tbsp','essloeffel'=>'tbsp','tbsp'=>'tbsp',
+        'tl'=>'tsp','teelÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã¢â‚¬Å¡ffel'=>'tsp','teeloeffel'=>'tsp','tsp'=>'tsp',
+        'el'=>'tbsp','esslÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÆ’Ã¢â‚¬Å¡ffel'=>'tbsp','essloeffel'=>'tbsp','tbsp'=>'tbsp',
         'tasse'=>'cup','cup'=>'cup','prise'=>'pinch','pinch'=>'pinch',
-        'st├╝ck'=>'piece','stueck'=>'piece','piece'=>'piece','dose'=>'can','can'=>'can',
+        'stÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬Â¢Ã‚Âck'=>'piece','stueck'=>'piece','piece'=>'piece','dose'=>'can','can'=>'can',
         'bund'=>'bunch','bunch'=>'bunch','g'=>'g','gramm'=>'g','kg'=>'kg','ml'=>'ml','l'=>'l','liter'=>'l',
         'oz'=>'oz','lb'=>'lb'
     ];
@@ -1422,7 +1492,7 @@ function sitc_parse_ingredient_line_v3(string $raw): array {
     }
 
     // Freitext-Heuristik
-    if (preg_match('/\b(saft|schale|abrieb|zeste)\b.*\b(einer|einem|eines)?\s*(halben|1\/2|┬¢)\s+(zitrone|limette|orange)\b/i', $raw, $m)) {
+    if (preg_match('/\b(saft|schale|abrieb|zeste)\b.*\b(einer|einem|eines)?\s*(halben|1\/2|ÃƒÂ¢Ã¢â‚¬ÂÃ‚Â¬Ãƒâ€šÃ‚Â¢)\s+(zitrone|limette|orange)\b/i', $raw, $m)) {
         $note = ucfirst(mb_strtolower($m[1], 'UTF-8'));
         $item = ucfirst(mb_strtolower($m[4], 'UTF-8'));
         $qty = '0.5';
@@ -1433,5 +1503,3 @@ function sitc_parse_ingredient_line_v3(string $raw): array {
     return ['qty'=>null,'unit'=>null,'item'=>$orig,'note'=>null,'raw'=>$orig,'ambiguous'=>true];
 }
 }
-
-

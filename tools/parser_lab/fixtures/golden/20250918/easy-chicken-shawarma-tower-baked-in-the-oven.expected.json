@@ -1,0 +1,103 @@
+{
+  "cases": [
+    {
+      "line": "10 chicken thighs (skinless, boneless)",
+      "qty": 10,
+      "unit": "Stück",
+      "item": "chicken thighs",
+      "note": "skinless, boneless"
+    },
+    {
+      "line": "1 onion (large, for chicken tower base)",
+      "qty": 1,
+      "unit": "Stück",
+      "item": "onion",
+      "note": "large, for chicken tower base"
+    },
+    {
+      "line": "3 tablespoons Greek yogurt",
+      "qty": 3,
+      "unit": "EL",
+      "item": "Greek yogurt",
+      "note": null
+    },
+    {
+      "line": "1 tablespoon lemon juice (freshly squeezed)",
+      "qty": 1,
+      "unit": "EL",
+      "item": "lemon juice",
+      "note": "freshly squeezed"
+    },
+    {
+      "line": "3 clove garlic (finely grated)",
+      "qty": 3,
+      "unit": null,
+      "item": "garlic",
+      "note": "finely grated"
+    },
+    {
+      "line": "2 teaspoons paprika",
+      "qty": 2,
+      "unit": "TL",
+      "item": "paprika",
+      "note": null
+    },
+    {
+      "line": "0.5 teaspoon ground cumin",
+      "qty": 0.5,
+      "unit": "TL",
+      "item": "ground cumin",
+      "note": null
+    },
+    {
+      "line": "0.5 teaspoon oregano",
+      "qty": 0.5,
+      "unit": "TL",
+      "item": "oregano",
+      "note": null
+    },
+    {
+      "line": "0.5 teaspoon red pepper flakes",
+      "qty": 0.5,
+      "unit": "TL",
+      "item": "red pepper flakes",
+      "note": null
+    },
+    {
+      "line": "ground cinnamon (a pinch)",
+      "item": "ground cinnamon",
+      "note": "a pinch"
+    },
+    {
+      "line": "2 teaspoons salt",
+      "qty": 2,
+      "unit": "TL",
+      "item": "salt",
+      "note": null
+    },
+    {
+      "line": "■■■■ TOPPING: ■■■■■",
+      "item": "TOPPING",
+      "note": null
+    },
+    {
+      "line": "0.5 onion (red, thinly sliced)",
+      "qty": 0.5,
+      "unit": "Stück",
+      "item": "onion",
+      "note": "red, thinly sliced"
+    },
+    {
+      "line": "1 tablespoon ground sumac",
+      "qty": 1,
+      "unit": "EL",
+      "item": "ground sumac",
+      "note": null
+    },
+    {
+      "line": "salt (to taste)",
+      "item": "salt",
+      "note": "to taste"
+    }
+  ]
+}

@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 // Simple guard to ensure CHANGELOG.md is newest-first and newest block on top.
 

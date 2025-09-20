@@ -1,21 +1,26 @@
 <?php
-declare(strict_types=1);
 
-if (!defined('ABSPATH')) exit;
-function sitc_render_instructions(array $data): string {
-    $instructions = array_values(array_filter(array_map('trim', (array)($data['instructions'] ?? []))));
-    if (empty($instructions)) return '';
-    ob_start();
-    ?>
-    <h3>Zubereitung</h3>
-    <ol class="sitc-instructions">
-        <?php foreach ($instructions as $step):
-            if ($step === '') continue;
-            $step = preg_replace('/^\s*\d+[\)\.\:\-]\s+/u', '', $step);
-            ?>
-            <li><?php echo esc_html($step); ?></li>
-        <?php endforeach; ?>
-    </ol>
-    <?php
-    return (string)ob_get_clean();
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+if (!function_exists('sitc_render_instructions')) {
+    function sitc_render_instructions(array $args): string
+    {
+        $instructions = isset($args['instructions']) && is_array($args['instructions']) ? $args['instructions'] : [];
+
+        if ($instructions === []) {
+            return '';
+        }
+
+        $html = '<ol class="sitc-instructions">';
+
+        foreach ($instructions as $step) {
+            $html .= '<li>' . esc_html((string) $step) . '</li>';
+        }
+
+        $html .= '</ol>';
+
+        return $html;
+    }
 }

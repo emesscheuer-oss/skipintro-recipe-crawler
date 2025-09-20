@@ -1,0 +1,163 @@
+{
+  "cases": [
+    {
+      "line": "750 g Hähnchenschenkel oder -brust (in mundgerechte Stücke geschnitten)",
+      "qty": 750,
+      "unit": "g",
+      "item": "Hähnchenschenkel oder -brust",
+      "note": "in mundgerechte Stücke geschnitten"
+    },
+    {
+      "line": "200 g Naturjoghurt",
+      "qty": 200,
+      "unit": "g",
+      "item": "Naturjoghurt",
+      "note": null
+    },
+    {
+      "line": "2 tbsp Ingwer-Knoblauch-Paste",
+      "qty": 2,
+      "unit": "EL",
+      "item": "Ingwer-Knoblauch-Paste",
+      "note": null
+    },
+    {
+      "line": "1 tsp Garam Masala",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Garam Masala",
+      "note": null
+    },
+    {
+      "line": "1 tsp Chilipulver",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Chilipulver",
+      "note": null
+    },
+    {
+      "line": "½ TL Kurkuma",
+      "qty": 0.5,
+      "unit": "TL",
+      "item": "Kurkuma",
+      "note": null
+    },
+    {
+      "line": "Saft einer halben Zitrone",
+      "qty": 0.5,
+      "unit": "Stück",
+      "item": "Zitrone",
+      "note": "Saft"
+    },
+    {
+      "line": "Salz nach Geschmack",
+      "item": "Salz",
+      "note": "nach Geschmack"
+    },
+    {
+      "line": "2 tbsp Pflanzenöl",
+      "qty": 2,
+      "unit": "EL",
+      "item": "Pflanzenöl",
+      "note": null
+    },
+    {
+      "line": "500 g Basmati-Reis (gewaschen und 30 Minuten eingeweicht)",
+      "qty": 500,
+      "unit": "g",
+      "item": "Basmati-Reis",
+      "note": "gewaschen und 30 Minuten eingeweicht"
+    },
+    {
+      "line": "5 Liter Wasser",
+      "qty": 5,
+      "unit": "l",
+      "item": "Wasser",
+      "note": null
+    },
+    {
+      "line": "1 Lorbeerblatt",
+      "qty": 1,
+      "unit": "Stück",
+      "item": "Lorbeerblatt",
+      "note": null
+    },
+    {
+      "line": "2-3 grüne Kardamomkapseln (leicht angedrückt)",
+      "min_qty": 2,
+      "max_qty": 3,
+      "unit": "Stück",
+      "item": "Kardamomkapseln",
+      "note": "grün, leicht angedrückt"
+    },
+    {
+      "line": "2-3 Nelken",
+      "min_qty": 2,
+      "max_qty": 3,
+      "unit": "Stück",
+      "item": "Nelken",
+      "note": null
+    },
+    {
+      "line": "1 Zimtstange",
+      "qty": 1,
+      "unit": "Stück",
+      "item": "Zimtstange",
+      "note": null
+    },
+    {
+      "line": "2 mittelgroße Zwiebeln (fein gehackt)",
+      "qty": 2,
+      "unit": "Stück",
+      "item": "Zwiebeln",
+      "note": "mittelgroß, fein gehackt"
+    },
+    {
+      "line": "2 mittelgroße Tomaten (gewürfelt)",
+      "qty": 2,
+      "unit": "Stück",
+      "item": "Tomaten",
+      "note": "mittelgroß, gewürfelt"
+    },
+    {
+      "line": "1 grüne Chili (Optional; fein gehackt)",
+      "qty": 1,
+      "unit": "Stück",
+      "item": "Chili",
+      "note": "grün, optional, fein gehackt"
+    },
+    {
+      "line": "½ Bund Koriander (gehackt)",
+      "qty": 0.5,
+      "unit": "bunch",
+      "item": "Koriander",
+      "note": "gehackt"
+    },
+    {
+      "line": "½ Bund Minze (gehackt)",
+      "qty": 0.5,
+      "unit": "bunch",
+      "item": "Minze",
+      "note": "gehackt"
+    },
+    {
+      "line": "1 tsp Safranfäden (in 2 EL warmer Milch eingeweicht)",
+      "qty": 1,
+      "unit": "TL",
+      "item": "Safranfäden",
+      "note": "in 2 EL warmer Milch eingeweicht"
+    },
+    {
+      "line": "2 tbsp Ghee oder Pflanzenöl",
+      "qty": 2,
+      "unit": "EL",
+      "item": "Ghee oder Pflanzenöl",
+      "note": null
+    },
+    {
+      "line": "Optional: Röstzwiebeln",
+      "item": "Röstzwiebeln",
+      "note": "optional"
+    }
+  ]
+}

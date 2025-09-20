@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 /**
  * Mini-Labor für Mengen-Prä-Normalisierung & Parsing (standalone, ohne WP).

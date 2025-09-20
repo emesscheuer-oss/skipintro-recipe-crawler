@@ -1,5 +1,88 @@
-﻿<?php
+<?php
 if (!defined('ABSPATH')) exit;
+
+// Compatibility helpers (no modern syntax)
+if (!function_exists('sitc_norm_dash')) {
+    function sitc_norm_dash(string $s): string {
+        $map = array(
+            '-' => "\u{2013}",
+            "\u{2012}" => "\u{2013}",
+            "\u{2013}" => "\u{2013}",
+            "\u{2014}" => "\u{2013}",
+            "\u{2015}" => "\u{2013}",
+            "\u{2212}" => "\u{2013}"
+        );
+        return strtr($s, $map);
+    }
+}
+
+if (!function_exists('sitc_norm_nbsp')) {
+    function sitc_norm_nbsp(string $s): string {
+        $replaced = str_replace(array("\u{00A0}", "\u{202F}", "\u{2007}"), ' ', $s);
+        $collapsed = preg_replace('/\s+/u', ' ', $replaced);
+        if ($collapsed === null) {
+            $collapsed = $replaced;
+        }
+        return trim($collapsed);
+    }
+}
+
+if (!function_exists('sitc_frac_to_decimal')) {
+    function sitc_frac_to_decimal(string $s): string {
+        $unicodeMap = array(
+            "\u{00BD}" => '1/2',
+            "\u{00BC}" => '1/4',
+            "\u{00BE}" => '3/4',
+            "\u{2153}" => '1/3',
+            "\u{2154}" => '2/3',
+            "\u{215B}" => '1/8'
+        );
+        $text = strtr($s, $unicodeMap);
+        $text = preg_replace_callback('/(?<!\d)(\d+)\s+(\d+)\/(\d+)/u', function ($m) {
+            $whole = (float)$m[1];
+            $num = (float)$m[2];
+            $den = (float)$m[3];
+            if ($den <= 0.0) {
+                $den = 1.0;
+            }
+            $value = $whole + ($num / $den);
+            return (string)$value;
+        }, $text);
+        $text = preg_replace_callback('/(?<!\d)(\d+)\/(\d+)(?!\d)/u', function ($m) {
+            $num = (float)$m[1];
+            $den = (float)$m[2];
+            if ($den <= 0.0) {
+                $den = 1.0;
+            }
+            $value = $num / $den;
+            return (string)$value;
+        }, $text);
+        $text = preg_replace_callback('/(\d+)\s*(\d+)\/(\d+)/u', function ($m) {
+            $whole = (float)$m[1];
+            $num = (float)$m[2];
+            $den = (float)$m[3];
+            if ($den <= 0.0) {
+                $den = 1.0;
+            }
+            $value = $whole + ($num / $den);
+            return (string)$value;
+        }, $text);
+        return $text;
+    }
+}
+
+if (!function_exists('sitc_decimal_comma_to_dot')) {
+    function sitc_decimal_comma_to_dot(string $s): string {
+        return preg_replace('/(\d),(?=\d)/u', '.', $s) ?? $s;
+    }
+}
+
+if (!function_exists('sitc_trim_collapse')) {
+    function sitc_trim_collapse(string $s): string {
+        $t = preg_replace('/\s+/u', ' ', $s);
+        return trim($t ?? $s);
+    }
+}
 
 // PCRE2-safe split helper: never returns false; returns [$s] on regex failure
 if (!function_exists('sitc_pcre2_split')) {
@@ -17,13 +100,13 @@ if (!function_exists('sitc_norm_strip_stopwords')) {
             return sitc_strip_stopwords_qty_context($s);
         }
         // Basic leading patterns
-        return preg_replace('/^\s*(?:ca\.?|circa|etwa|ungef\.?|ungef(?:ae|ä)hr\.?|about|approx\.?|approximately|\(ca\.?\))\s+/iu', ' ', $s) ?? $s;
+        return preg_replace('/^\s*(?:ca\.?|circa|etwa|ungef\.?|ungef(?:ae|Ã¤)hr\.?|about|approx\.?|approximately|\(ca\.?\))\s+/iu', ' ', $s) ?? $s;
     }
 }
 
 if (!function_exists('sitc_norm_unify_dashes')) {
     function sitc_norm_unify_dashes(string $s): string {
-        return preg_replace('/[\x{2012}-\x{2015}]/u', '-', $s) ?? $s;
+        return sitc_norm_dash($s);
     }
 }
 
@@ -51,24 +134,23 @@ if (!function_exists('sitc_norm_commas_to_dot')) {
 
 if (!function_exists('sitc_norm_trim_ws')) {
     function sitc_norm_trim_ws(string $s): string {
-        $t = preg_replace('/\s+/u', ' ', $s);
-        return trim($t ?? $s);
+        return sitc_trim_collapse($s);
     }
 }
 
-// FIX-QTY-CORE: normalize unicode fractions (incl. mixed forms like 1½ -> 1 1/2)
+// FIX-QTY-CORE: normalize unicode fractions (incl. mixed forms like 1Â½ -> 1 1/2)
 if (!function_exists('sitc_normalize_unicode_fractions')) {
     function sitc_normalize_unicode_fractions(string $s): string {
         // Insert space between integer and unicode fraction
         $s = preg_replace('/(\d)\s*([\x{00BD}\x{00BC}\x{00BE}\x{2153}\x{2154}\x{215B}])/u', '$1 $2', $s);
         // Replace unicode fractions with ASCII equivalents
         $map = [
-            "\x{00BD}" => '1/2', // ½
-            "\x{00BC}" => '1/4', // ¼
-            "\x{00BE}" => '3/4', // ¾
-            "\x{2153}" => '1/3', // ⅓
-            "\x{2154}" => '2/3', // ⅔
-            "\x{215B}" => '1/8', // ⅛
+            "\x{00BD}" => '1/2', // Â½
+            "\x{00BC}" => '1/4', // Â¼
+            "\x{00BE}" => '3/4', // Â¾
+            "\x{2153}" => '1/3', // â…“
+            "\x{2154}" => '2/3', // â…”
+            "\x{215B}" => '1/8', // â…›
         ];
         return strtr($s, $map);
     }
@@ -105,7 +187,10 @@ if (!function_exists('sitc_strip_leading_qty_unit')) {
         $t = preg_replace('/^\s*(?:\d+(?:[\.,]\d+)?)(?:\s+)?/u', '', $t);
         // remove optional unit token
         if ($knownUnits) {
-            $pattern = '/^(?:'.implode('|', array_map(fn($u)=>preg_quote($u,'/'), $knownUnits)).')(?:\.?s)?\b\s*/iu';
+            $quotedUnits = array_map(function ($unitValue) {
+                return preg_quote($unitValue, '/');
+            }, $knownUnits);
+            $pattern = '/^(?:' . implode('|', $quotedUnits) . ')(?:\.?s)?\b\s*/iu';
             $t = preg_replace($pattern, '', $t);
         }
         return trim($t);
@@ -114,23 +199,26 @@ if (!function_exists('sitc_strip_leading_qty_unit')) {
 // D-FIX: normalize qty tokens (leading dot, decimal comma, unicode fractions to ascii, dashes, "bis")
 if (!function_exists('sitc_normalize_qty_tokens')) {
     function sitc_normalize_qty_tokens(string $s): string {
-        $t = $s;
-        // NBSP variants to space
-        $t = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $t);
-        // leading ".50" â†’ " 0.50" (space before to aid tokenization), but keep prefix
-        $t = preg_replace('/(^|[^0-9])\.([0-9]+)/u', '$1 0.$2', $t);
-        // decimal comma inside numbers
-        $t = preg_replace('/(\d),(?=\d)/u', '.', $t);
-        // unicode vulgar fraction chars â†’ ascii fraction strings
-        $map = [ 'Â½'=>'1/2', 'Â¼'=>'1/4', 'Â¾'=>'3/4', 'â…“'=>'1/3', 'â…”'=>'2/3', 'â…›'=>'1/8' ];
-        $t = strtr($t, $map);
-        // unify dashes and "bis" to hyphen
-        $t = preg_replace('/[\x{2012}-\x{2015}]/u', '-', $t);
-        $t = preg_replace('/\s+bis\s+/iu', '-', $t);
-        return trim(preg_replace('/\s{2,}/', ' ', $t));
+        $t = sitc_norm_nbsp($s);
+
+        $temp = preg_replace('/(^|[^0-9])\.([0-9]+)/u', '$1 0.$2', $t);
+        if ($temp !== null) {
+            $t = $temp;
+        }
+
+        $t = sitc_decimal_comma_to_dot($t);
+        $t = sitc_frac_to_decimal($t);
+        $t = sitc_norm_dash($t);
+        $t = str_replace("\u{2013}", '-', $t);
+
+        $temp = preg_replace('/\s+bis\s+/iu', '-', $t);
+        if ($temp !== null) {
+            $t = $temp;
+        }
+
+        return sitc_trim_collapse($t);
     }
 }
-
 // D-FIX-2: remove consumed prefix from start of line (qty or range fragment)
 if (!function_exists('sitc_trim_consumed_prefix')) {
     function sitc_trim_consumed_prefix(string $line, string $consumed): string {
@@ -164,7 +252,7 @@ if (!function_exists('sitc_extract_unit_item_note')) {
                 $s = trim(substr($s, strlen($uTok)));
             } else {
                 $uLower = mb_strtolower($uTok, 'UTF-8');
-                if (in_array($uLower, ['stück','stǬck','stueck','stk'], true)) {
+                if (in_array($uLower, ['stÃ¼ck','stÇ¬ck','stueck','stk'], true)) {
                     $unit = 'piece';
                     $s = trim(substr($s, strlen($uTok)));
                 }
@@ -176,7 +264,7 @@ if (!function_exists('sitc_extract_unit_item_note')) {
         $item = trim($tn['clean']);
         if ($tn['note']) { $note = trim(($note ? $note . '; ' : '') . $tn['note']); }
 
-        // Hyphen note like Ingwer-StÃ¼ck when weight unit present
+        // Hyphen note like Ingwer-StÃƒÂ¼ck when weight unit present
         if ($unit !== null) {
             $hn = sitc_hyphen_note_split($item, $unit);
             if ($hn['note']) { $item = $hn['item']; $note = trim(($note ? $note . '; ' : '') . $hn['note']); }
@@ -200,8 +288,13 @@ if (!function_exists('sitc_struct_from_line_df2')) {
         $line = sitc_normalize_qty_tokens($line);
 
         // Split by bullets/semicolon/2+ spaces
-        $parts = sitc_pcre2_split('/(?:\s*[;•·]\s+|\h{2,})/u', $line);
-        $parts = array_values(array_filter(array_map('trim', $parts), fn($s)=>$s!=='' && !sitc_is_bare_number($s)));
+        $parts = sitc_pcre2_split('/(?:\s*[;â€¢Â·]\s+|\h{2,})/u', $line);
+        $parts = array_values(array_filter(
+            array_map('trim', $parts),
+            function ($value) {
+                return $value !== '' && !sitc_is_bare_number($value);
+            }
+        ));
         if (!$parts) $parts = [$line];
 
         foreach ($parts as $part) {
@@ -308,8 +401,13 @@ if (!function_exists('sitc_extract_note_from_item')) {
         $note = null;
         if (preg_match('/^(.*)\(([^\)]*)\)\s*$/u', $item, $m)) { $item = trim($m[1]); $note = trim($m[2]); }
         if (strpos($item, ',') !== false) {
-            [$l,$r] = array_map('trim', explode(',', $item, 2));
-            $item = $l; $note = ($note ? $note.', ' : '').$r;
+            $split = explode(',', $item, 2);
+            $left = isset($split[0]) ? trim($split[0]) : '';
+            $right = isset($split[1]) ? trim($split[1]) : '';
+            $item = $left;
+            if ($right !== '') {
+                $note = ($note ? $note . ', ' : '') . $right;
+            }
         }
         $note = $note !== '' ? $note : null;
         return ['item'=>$item, 'note'=>$note];
@@ -389,8 +487,13 @@ if (!function_exists('sitc_struct_from_line_e1')) {
         $pn  = sitc_qty_pre_normalize_parser($pre);
 
         // Split by bullets, middot, semicolon, or 2+ spaces
-        $parts = sitc_pcre2_split('/(?:\s*[;â€¢Â·]\s+|\h{2,})/u', $pn);
-        $parts = array_values(array_filter(array_map('trim', $parts), fn($s)=>$s!=='' && !sitc_is_bare_number($s)));
+        $parts = sitc_pcre2_split('/(?:\s*[;Ã¢â‚¬Â¢Ã‚Â·]\s+|\h{2,})/u', $pn);
+        $parts = array_values(array_filter(
+            array_map('trim', $parts),
+            function ($value) {
+                return $value !== '' && !sitc_is_bare_number($value);
+            }
+        ));
         if (!$parts) $parts = [$pn];
 
         foreach ($parts as $part) {
@@ -411,8 +514,8 @@ if (!function_exists('sitc_struct_from_line_e1')) {
                         if ($uCanon) {
                             $unitField = $uCanon;
                         } else {
-                            // Extra: explicit StÃ¼ck umlaut handling
-                            if ($uLower === 'stÃ¼ck') { $unitField = 'piece'; }
+                            // Extra: explicit StÃƒÂ¼ck umlaut handling
+                            if ($uLower === 'stÃƒÂ¼ck') { $unitField = 'piece'; }
                             else {
                                 $rest = trim($u . ' ' . $rest);
                                 if ($uLower === 'tk') { $noteField = trim(($noteField ? $noteField.'; ' : '') . 'TK'); }
@@ -461,16 +564,16 @@ if (!function_exists('sitc_num_norm_dec_comma')) {
     }
 }
 
-// Fixed Unicode fraction map (Â¼ Â½ Â¾ â…“ â…” â…›)
+// Fixed Unicode fraction map (Ã‚Â¼ Ã‚Â½ Ã‚Â¾ Ã¢â€¦â€œ Ã¢â€¦â€ Ã¢â€¦â€º)
 if (!function_exists('sitc_unicode_fraction_map_fixed')) {
     function sitc_unicode_fraction_map_fixed(): array {
         return [
-            'Â½' => 0.5,
-            'Â¼' => 0.25,
-            'Â¾' => 0.75,
-            'â…“' => 0.3333,
-            'â…”' => 0.6667,
-            'â…›' => 0.125,
+            'Ã‚Â½' => 0.5,
+            'Ã‚Â¼' => 0.25,
+            'Ã‚Â¾' => 0.75,
+            'Ã¢â€¦â€œ' => 0.3333,
+            'Ã¢â€¦â€' => 0.6667,
+            'Ã¢â€¦â€º' => 0.125,
         ];
     }
 }
@@ -492,7 +595,7 @@ if (!function_exists('sitc_strip_stopwords_qty_context')) {
     function sitc_strip_stopwords_qty_context(string $s): string {
         $t = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $s);
         if ($t === null) $t = $s;
-        $t = preg_replace('/^\s*(?:ca\.?|circa|etwa|ungef(?:\.|aehr|Ã¤hr)?|about|approx(?:\.|imately)?|\(ca\.?\))\s+/iu', ' ', $t);
+        $t = preg_replace('/^\s*(?:ca\.?|circa|etwa|ungef(?:\.|aehr|ÃƒÂ¤hr)?|about|approx(?:\.|imately)?|\(ca\.?\))\s+/iu', ' ', $t);
         if ($t === null) $t = $s;
         $t = preg_replace('/(?<=\d|\p{L})\s*\((?:ca\.?|circa|about|approx\.?)\)\s*/iu', ' ', $t);
         if ($t === null) $t = $s;
@@ -510,7 +613,7 @@ if (!function_exists('sitc_decimalize_commas_in_numbers')) {
 // E1: convert Unicode fractions and mixed numbers to decimal strings
 if (!function_exists('sitc_unicode_fractions_to_decimal')) {
     function sitc_unicode_fractions_to_decimal(string $s): string {
-        $map = [ 'Â½'=>0.5, 'Â¼'=>0.25, 'Â¾'=>0.75, 'â…“'=>0.3333, 'â…”'=>0.6667, 'â…›'=>0.125 ];
+        $map = [ 'Ã‚Â½'=>0.5, 'Ã‚Â¼'=>0.25, 'Ã‚Â¾'=>0.75, 'Ã¢â€¦â€œ'=>0.3333, 'Ã¢â€¦â€'=>0.6667, 'Ã¢â€¦â€º'=>0.125 ];
         $class = preg_quote(implode('', array_keys($map)), '/');
         $s = preg_replace_callback('/(\d)\s*(['.$class.'])/u', function($m) use($map){
             return (string)((float)$m[1] + (float)$map[$m[2]]);
@@ -524,19 +627,19 @@ if (!function_exists('sitc_unicode_fractions_to_decimal')) {
 if (!function_exists('sitc_unicode_fraction_map')) {
     function sitc_unicode_fraction_map(): array {
         return [
-            'Â½' => 0.5,
-            'Â¼' => 0.25,
-            'Â¾' => 0.75,
-            'â…“' => 0.3333,
-            'â…”' => 0.6667,
-            'â…›' => 0.125,
+            'Ã‚Â½' => 0.5,
+            'Ã‚Â¼' => 0.25,
+            'Ã‚Â¾' => 0.75,
+            'Ã¢â€¦â€œ' => 0.3333,
+            'Ã¢â€¦â€' => 0.6667,
+            'Ã¢â€¦â€º' => 0.125,
         ];
     }
 }
 
 // Quantity token to float, handling:
-// - Unicode fractions (Â½ Â¼ Â¾ â…“ â…” â…›)
-// - Mixed numbers (1Â½, 1 1/2)
+// - Unicode fractions (Ã‚Â½ Ã‚Â¼ Ã‚Â¾ Ã¢â€¦â€œ Ã¢â€¦â€ Ã¢â€¦â€º)
+// - Mixed numbers (1Ã‚Â½, 1 1/2)
 // - Fractions a/b
 // - Decimal comma
 if (!function_exists('sitc_qty_from_token')) {
@@ -549,7 +652,7 @@ if (!function_exists('sitc_qty_from_token')) {
 
         $map = sitc_unicode_fraction_map_fixed();
 
-        // 1Â½ style
+        // 1Ã‚Â½ style
         if (preg_match('/^([0-9]+)\s*([' . preg_quote(implode('', array_keys($map)), '/') . '])$/u', $s, $m)) {
             $base = (float)$m[1];
             $frac = (float)($map[$m[2]] ?? 0.0);
@@ -586,22 +689,22 @@ if (!function_exists('sitc_qty_pre_normalize_parser')) {
         // NBSP / NNBSP to space
         $t = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $t);
         // drop leading stopwords and (ca.) suffix
-        $t = preg_replace('/^(ca\.?|circa|etwa|ungef\.?|ungef(?:ae|Ã¤)hr\.?|about|approx\.?|approximately)\s+/iu', '', $t);
+        $t = preg_replace('/^(ca\.?|circa|etwa|ungef\.?|ungef(?:ae|ÃƒÂ¤)hr\.?|about|approx\.?|approximately)\s+/iu', '', $t);
         $t = preg_replace('/\((?:ca\.?|circa|about|approx\.?)\)\s*$/iu', '', $t);
-        // decimal comma in numbers and leading dot â†’ 0.x
+        // decimal comma in numbers and leading dot Ã¢â€ â€™ 0.x
         $t = sitc_decimalize_commas_in_numbers($t);
         $t = preg_replace('/(^|[^0-9])\.([0-9]+)/u', '$10.$2', $t);
-        // decimal comma in numbers and leading dot â†’ 0.x
+        // decimal comma in numbers and leading dot Ã¢â€ â€™ 0.x
         $t = sitc_decimalize_commas_in_numbers($t);
         $t = preg_replace('/(^|[^0-9])\.([0-9]+)/u', '$10.$2', $t);
         // unify range separators to hyphen
         $t = preg_replace('/[\x{2012}-\x{2015}]/u', '-', $t);
         // tighten slash
         $t = preg_replace('/\s*\/\s*/u', '/', $t);
-        // Mixed unicode fractions to decimal within text âžœ keep comma inside text neutralization for human strings
+        // Mixed unicode fractions to decimal within text Ã¢Å¾Å“ keep comma inside text neutralization for human strings
         $map = sitc_unicode_fraction_map_fixed();
         $class = preg_quote(implode('', array_keys($map)), '/');
-        // mixed number: 1Â½ -> 1 + 0.5 (but keep as decimal string; the float parse happens later)
+        // mixed number: 1Ã‚Â½ -> 1 + 0.5 (but keep as decimal string; the float parse happens later)
         $t = preg_replace_callback('/(\d)\s*([' . $class . '])/u', function($m) use ($map){
             $sum = (float)$m[1] + (float)($map[$m[2]] ?? 0.0);
             return (string)$sum;
@@ -662,7 +765,7 @@ if (!function_exists('sitc_coerce_qty_float')) {
     }
 }
 
-// Canonical unit aliases (German -> short EN) â€“ parser-internal only
+// Canonical unit aliases (German -> short EN) Ã¢â‚¬â€œ parser-internal only
 // E1 helpers: trailing notes, hyphen-notes, bare-number detector
 if (!function_exists('sitc_extract_trailing_notes')) {
     function sitc_extract_trailing_notes(string $s): array {
@@ -693,9 +796,9 @@ if (!function_exists('sitc_hyphen_note_split')) {
         $weightUnits = ['g','kg'];
         if ($contextUnit && in_array($contextUnit, $weightUnits, true)) {
             $suffixMap = [
-                'stÃ¼ck'=>'StÃ¼ck','stk'=>'StÃ¼ck','stueck'=>'StÃ¼ck','stÇ¬ck'=>'StÃ¼ck',
+                'stÃƒÂ¼ck'=>'StÃƒÂ¼ck','stk'=>'StÃƒÂ¼ck','stueck'=>'StÃƒÂ¼ck','stÃ‡Â¬ck'=>'StÃƒÂ¼ck',
                 'scheibe'=>'Scheibe','scheiben'=>'Scheiben',
-                'wÃ¼rfel'=>'WÃ¼rfel','wuerfel'=>'WÃ¼rfel',
+                'wÃƒÂ¼rfel'=>'WÃƒÂ¼rfel','wuerfel'=>'WÃƒÂ¼rfel',
                 'streifen'=>'Streifen',
             ];
             if (preg_match('/^([\p{L}][\p{L}\-]*)\s*-\s*([\p{L}]+)$/u', $i, $m)) {
@@ -722,13 +825,13 @@ if (!function_exists('sitc_unit_alias_canonical')) {
             'kg'=>'kg',
             'ml'=>'ml','milliliter'=>'ml','millilitre'=>'ml',
             'l'=>'l','liter'=>'l','litre'=>'l',
-            'tl'=>'tsp','teeloeffel'=>'tsp','teelÃ¶ffel'=>'tsp','tsp'=>'tsp','teaspoon'=>'tsp','teaspoons'=>'tsp',
-            'el'=>'tbsp','essloeffel'=>'tbsp','esslÃ¶ffel'=>'tbsp','tbsp'=>'tbsp','tablespoon'=>'tbsp','tablespoons'=>'tbsp',
+            'tl'=>'tsp','teeloeffel'=>'tsp','teelÃƒÂ¶ffel'=>'tsp','tsp'=>'tsp','teaspoon'=>'tsp','teaspoons'=>'tsp',
+            'el'=>'tbsp','essloeffel'=>'tbsp','esslÃƒÂ¶ffel'=>'tbsp','tbsp'=>'tbsp','tablespoon'=>'tbsp','tablespoons'=>'tbsp',
             'tasse'=>'cup','tassen'=>'cup','cup'=>'cup','cups'=>'cup',
             'prise'=>'pinch','prisen'=>'pinch','pinch'=>'pinch',
-            'stk'=>'piece','stÃ¼ck'=>'piece','stueck'=>'piece','piece'=>'piece','pieces'=>'piece',
+            'stk'=>'piece','stÃƒÂ¼ck'=>'piece','stueck'=>'piece','piece'=>'piece','pieces'=>'piece',
             'dose'=>'can','dosen'=>'can','can'=>'can',
-            'bund'=>'bunch','bÃ¼ndel'=>'bunch','bunch'=>'bunch',
+            'bund'=>'bunch','bÃƒÂ¼ndel'=>'bunch','bunch'=>'bunch',
             'zehe'=>'clove','zehen'=>'clove','clove'=>'clove','cloves'=>'clove',
         ];
         $k = mb_strtolower(trim($u), 'UTF-8');
@@ -736,7 +839,7 @@ if (!function_exists('sitc_unit_alias_canonical')) {
     }
 }
 
-// Structured ingredient splitter from a single line â†’ one or more entries
+// Structured ingredient splitter from a single line Ã¢â€ â€™ one or more entries
 // Returns list of: { raw, qty:?float|{low,high}, unit:?string, item:string, note:?string }
 if (!function_exists('sitc_struct_from_line')) {
     function sitc_struct_from_line(string $rawLine): array {
@@ -744,8 +847,13 @@ if (!function_exists('sitc_struct_from_line')) {
         $pn = sitc_qty_pre_normalize_parser($rawLine);
 
         // Split by common delimiters: bullets, middot, semicolon, or 2+ horizontal spaces
-        $parts = sitc_pcre2_split('/(?:\s*[;â€¢Â·]\s+|\h{2,})/u', $pn);
-        $parts = array_values(array_filter(array_map('trim', $parts), fn($s)=>$s!==''));
+        $parts = sitc_pcre2_split('/(?:\s*[;Ã¢â‚¬Â¢Ã‚Â·]\s+|\h{2,})/u', $pn);
+        $parts = array_values(array_filter(
+            array_map('trim', $parts),
+            function ($value) {
+                return $value !== '';
+            }
+        ));
         if (!$parts) $parts = [$pn];
 
         foreach ($parts as $part) {
@@ -797,7 +905,7 @@ if (!function_exists('sitc_struct_from_line')) {
                         $parts2 = array_map('trim', explode(',', $itemField, 2));
                         if (count($parts2)===2) { $itemField = $parts2[0]; $noteField = trim(($noteField? $noteField.'; ':'').$parts2[1]); }
                     }
-                    // Heuristics: Knoblauchzehen â†’ unit clove + item Knoblauch
+                    // Heuristics: Knoblauchzehen Ã¢â€ â€™ unit clove + item Knoblauch
                     if ($unitField===null && preg_match('/^knoblauchzehen?\b/iu', $itemField)) { $unitField='clove'; $itemField='Knoblauch'; }
                     if ($unitField===null && preg_match('/^(zehe|zehen)\b/iu', $itemField)) { $unitField='clove'; $itemField=preg_replace('/^(zehe|zehen)\b\s*/iu','',$itemField); }
                 } else {
