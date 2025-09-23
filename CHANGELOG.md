@@ -1,81 +1,37 @@
 <!-- SITC_CHANGELOG_TOP: new entries must be inserted BELOW this line -->
 
 ## [WIP] – in Arbeit
+(n/a – ehemals hier gelistete Punkte sind in 0.6.0.0 enthalten.)
+
+## [0.6.00] - 2025-09-23 12:00 Europe/Berlin
 ### Added
-- Admin-Seite 'Validierung' (Parser-Lab) unter Beiträge → Validierung. JSON-Output via `&format=json`.
- - RELEASE.md: Local-First Workflow dokumentiert (Pflichtlauf: Auto-Eval, Real-Data-Refresh, Frontend-Smoke).
- - docs/SEEDS.md: Smoke-Test-Seeds (3–5 Post-IDs) dokumentiert.
- - Dev-Badge: Anzeige von effective engine, requested engine, SITC_ING_V2 Flag, confidence, active flags.
- - Importer-Quicklinks zu Validierung und Debug-Log (Dev-Mode only) für schnellere QA.
-### Files
-- includes/Admin/ValidationRunner.php
-- includes/Admin/ValidationPage.php
-- skipintro-recipe-crawler.php
-- RELEASE.md (neu)
-- docs/SEEDS.md (neu)
-- includes/renderer/dev_badge.php
-- includes/admin-page.php
+- Admin-Seite **„Validierung“ (Parser-Lab)** unter Beiträge → Validierung inkl. JSON-Output (`&format=json`).
+- **Web Auto-Eval** (Legacy vs. Modular) und Fixtures-Index im Parser-Lab; einfache **Mini-Probe** (`quick_qty_probe.php`) für parse_line.
+- **Git Hooks** (optional): `pre-commit`/`pre-push` Beispielskripte dokumentiert, die `strict_guard.php` vor Commit/Push ausführen.
+- Doku: **README**, **DEV_GUARDS**, **PARSER_LAB** erweitert.
 
 ### Changed
-- parser_lab als LEGACY/Fallback gekennzeichnet ([ARCHIVE]); keine neuen Features, nur Bugfixes.
-- Harness: Fixture-Pfade robust aufgelöst (keine Mischpfade wie `tools/C:/...`), klare Fehlermeldung bei fehlender Fixture; kein leerer Input mehr an Parser.
- - Frontend: Modular-Engine global aktiviert (`SITC_ING_V2 = ON`), Engine=auto bevorzugt Modular; stiller Fallback auf Legacy bei Fehler/Low-Quality; Query-Override `?engine=legacy|mod|auto`.
- - Debug: Parser-Fehler-Logging (dev-only) mit Rotation (`uploads/skipintro-recipe-crawler/debug.log`).
- - README.md: Verweist auf RELEASE & SEEDS.
-### Files
-- tools/parser_lab/README.md (neu)
-- tools/parser_lab/lib/harness.php
-- tools/parser_lab/run.php
-- tools/parser_lab/auto_eval_web.php
- - includes/settings.php
- - includes/parser.php
- - skipintro-recipe-crawler.php
- - includes/debug.php (neu)
+- **Renderer** vollständig auf **String-Builder** umgestellt (keine `ob_start()`-Flows). Markup/Attribute beibehalten.  
+  Dateien: `includes/renderer.php`, `includes/renderer/header.php`, `includes/renderer/ingredients.php`, `includes/renderer/instructions.php`.
+- **Modularer Ingredients-Parser (v2f)** als Standard im Auto-Modus: Brüche (Unicode/ASCII), gemischte Zahlen, Ranges, Dezimal-Komma, Text-Hälften stabilisiert.  
+  Dateien: `includes/ingredients/tokenize.php`, `qty.php`, `unit.php`, `note.php`, `parse_line.php`, `includes/parser.php` (MUX).
+- Parser-Lab überarbeitet: robustere Pfadauflösung, klare Fehlermeldungen/Diagnosen; LEGACY als Fallback gekennzeichnet.
+- Frontend: **Engine=auto** bevorzugt Modular, sauberer Fallback auf Legacy.
+- **Self-Check (Web)** aufgeräumt; Diagnose zeigt konsistenten Status.
+
+### Fixed
+- **Guards: 0 Issues** – Projektweit `?>` entfernt, `declare(strict_types=1)` eliminiert; **BOMs** und Zeilenenden normalisiert.  
+  Dateien u. a.: `tools/dev/strict_guard.php`, `tools/dev/scan_bom.php`, diverse `includes/*`.
+- Parser-Lab: `diag_box()` nimmt String/Array entgegen, keine TypeErrors; Smoke-Tests mit Engine=mod laufen.
+- Diverse Encoding-Artefakte (Mojibake) beseitigt; Admin-Code strikt auf `is_admin()` begrenzt → kein Frontend-Whitespace mehr.
 
 ### Security/Perf
-- Quicklinks sind dev-gated (WP_DEBUG/SITC_DEV_MODE/Dev-Option) und nur im Admin sichtbar; kein Einfluss auf Frontend-Renderpfad.
+- Dev-Quicklinks/Badges nur im **Dev-Modus** sichtbar (WP_DEBUG/SITC_DEV_MODE). Keine Frontend-Performance-Kosten.
 
-### Fixed
-- Frontend-Whitespace oberhalb des Inhalts eliminiert – Admin-Code strikt auf `is_admin()` begrenzt, Frontend-Output-Guard eingeführt, BOM/Whitespace-Risiken beseitigt; optionaler CSS-Fallback.
-### Files
-- skipintro-recipe-crawler.php
-- includes/settings.php
-- includes/assets.php
-- includes/refresh.php
-- tools/dev/scan_bom.php (Dev)
-
-### Fixed
-- Parser-Lab: diag_box() akzeptiert nun Strings und Arrays; verhindert TypeError.
-### Files
-- tools/parser_lab/run.php
-• Fixed: Modular-Pipeline lädt verlässlich (includes + MUX an allen Call-Sites); Parser-Lab Smoke-Test bei Engine=mod.
-• Files: includes/parser.php; includes/settings.php; tools/parser_lab/run.php
-### Added
-- Modular-Parser – Qty/Unit/Notes-Erkennung (Brüche, gemischte Zahlen, Ranges, Bund/Zehe/EL/TL, TK/Klammern/Suffix), verbessert Dezimal-Komma im Parsing.
-- Parser-Lab dev-dump (qty/unit/item/note) sichtbar nur bei Engine=mod.
-### Changed
-- Parser-Lab nutzt Engine=mod für Tests; Prod-Flag bleibt OFF.
-### Files
-- includes/ingredients/tokenize.php
-- includes/ingredients/qty.php
-- includes/ingredients/unit.php
-- includes/ingredients/note.php
-- includes/ingredients/parse_line.php
-- includes/parser.php (MUX only)
-- tools/parser_lab/run.php (Badge/Toggle unverändert, dev-dump)
-
-### Added
-- Web-Auto-Eval (Legacy vs. Modular) unter `tools/parser_lab/auto_eval_web.php`.
-### Changed
-- Parser-Lab `run.php` mit Engine-Toggle (`?engine=legacy|mod|auto`), Badge und Vergleichslinks.
-### Note
-- `SITC_ING_V2` bleibt OFF, Modular nur für Tests.
-### Files
-- includes/settings.php
-- includes/parser.php
-- tools/parser_lab/run.php
-- tools/parser_lab/auto_eval_web.php
-- tools/parser_lab/out/.htaccess
+### Files (Auszug)
+- **Neu/Docs**: `README.md`, `docs/DEV_GUARDS.md`, `docs/PARSER_LAB.md`, `RELEASE.md`, `docs/SEEDS.md`
+- **Parser/Renderer**: `includes/parser.php`, `includes/ingredients/*.php`, `includes/renderer/*.php`
+- **Tools/Lab**: `tools/dev/strict_guard.php`, `tools/dev/selfcheck_web.php`, `tools/dev/scan_bom.php`, `tools/parser_lab/*.php`
 
 ## [0.5.55] - 2025-09-12 16:52
 ### Changed/Fixed
