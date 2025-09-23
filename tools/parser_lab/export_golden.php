@@ -101,6 +101,3 @@ foreach (array_unique($ids) as $pid) {
     }
 }
 echo "Fertig. Exportiert: $exported, ohne Zeilen: $skipped\n";
-
-
-

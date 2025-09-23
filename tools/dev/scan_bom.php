@@ -67,4 +67,3 @@ foreach ($issues as $i) {
 }
 
 exit(0);
-

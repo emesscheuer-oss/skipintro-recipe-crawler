@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 if (!defined('ABSPATH')) {
     exit;
@@ -45,8 +44,8 @@ function sitc_render_header(array $args): string
         $html .= '<div class="sitc-actions">';
         $html .= '<button type="button" class="sitc-btn sitc-btn-grocery" data-target="#sitc-list-' . esc_attr((string) $post_id) . '" aria-expanded="false" title="Einkaufsliste"><span class="material-symbols-outlined">shopping_cart</span></button>';
         $html .= '<button type="button" class="sitc-btn sitc-btn-wake" title="Bildschirm anlassen"><span class="material-symbols-outlined">toggle_on</span></button>';
-        $html .= '<button type="button" class="sitc-btn sitc-btn-trash" data-post="' . esc_attr(str_replace(',', '.', (string) $post_id)) . '" data-token="' . esc_attr($trash_token) . '" title="Rezept lÃ¶schen"><span class="material-symbols-outlined">delete</span></button>';
-        $html .= '<button type="button" class="sitc-btn sitc-btn-photo" title="Foto hinzufÃ¼gen"><span class="material-symbols-outlined">add_a_photo</span></button>';
+        $html .= '<button type="button" class="sitc-btn sitc-btn-trash" data-post="' . esc_attr(str_replace(',', '.', (string) $post_id)) . '" data-token="' . esc_attr($trash_token) . '" title="Rezept lÃƒÂ¶schen"><span class="material-symbols-outlined">delete</span></button>';
+        $html .= '<button type="button" class="sitc-btn sitc-btn-photo" title="Foto hinzufÃƒÂ¼gen"><span class="material-symbols-outlined">add_a_photo</span></button>';
         $html .= '</div>';
     }
     $html .= '</div>';

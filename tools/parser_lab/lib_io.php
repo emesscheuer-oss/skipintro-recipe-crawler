@@ -24,4 +24,3 @@ function pl_ext(string $path): string {
     $e = strtolower(pathinfo($path, PATHINFO_EXTENSION));
     return $e;
 }
-

@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+
 if (!function_exists('sitc_slugify_lite')) {
     function sitc_slugify_lite(string $value): string {
         $value = mb_strtolower($value, 'UTF-8');
@@ -136,5 +136,3 @@ if (!function_exists('sitc_ing_match_patterns')) {
         return false;
     }
 }
-
-

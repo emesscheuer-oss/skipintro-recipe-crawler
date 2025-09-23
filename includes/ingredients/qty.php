@@ -1,52 +1,52 @@
 <?php
-declare(strict_types=1);
-require_once __DIR__ . '/i18n.php';
+// qty.sitcnorm.v4.php — robust, conservative QTY normalizer (no unit synonym rewrites)
+// - UTF-8 (no BOM), no declare(), no closing PHP tag
+// - Safe to call early in tokenization before regex patterns
 
-/**
- * Qty-Erkennung (Unicode/ASCII-Brueche, gemischte Zahlen, Ranges, Dezimalkomma, halbe-Texte).
- * Gibt float oder {low,high} zurueck; kein String.
- */
-if (!function_exists('sitc_ing_detect_qty')) {
-function sitc_ing_detect_qty(array $tok, string $locale = 'de') {
-    $s = (string)($tok['norm'] ?? ($tok['raw'] ?? ''));
-    $lex = function_exists('sitc_ing_load_locale') ? sitc_ing_load_locale($locale) : [];
-    $rawSource = (string)($tok['raw'] ?? $s);
+if (!function_exists('sitc_qty_normalize')) {
+function sitc_qty_normalize(string $s): string {
+    // 1) NBSP / NNBSP → normal space
+    $s = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $s) ?? $s;
 
-    // a) Range (aus Tokenizer oder per Pattern)
-    if (!empty($tok['range']) && is_array($tok['range'])) {
-        return $tok['range'];
-    }
-    if (preg_match('/^(\d+(?:\.\d+)?)\s*[\x{2013}-]\s*(\d+(?:\.\d+)?)/u', $s, $m)) {
-        return ['low' => (float)$m[1], 'high' => (float)$m[2]];
-    }
+    // 2) Normalize en/em dash (– —) → hyphen-minus (-)
+    $s = str_replace(["\xE2\x80\x93", "\xE2\x80\x94"], "-", $s);
 
-    // b) Gemischte Zahl: a + b/c oder a + 0.5
-    if (preg_match('/^\s*(\d+)\s*\+\s*(\d+)\/(\d+)/u', $s, $m)) {
-        $a = (float)$m[1];
-        $b = (float)$m[2];
-        $c = max(1.0, (float)$m[3]);
-        return $a + ($b / $c);
-    }
-    if (preg_match('/^\s*(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)/u', $s, $m)) {
-        return (float)$m[1] + (float)$m[2];
-    }
+    // 3) Unicode vulgar fractions → ASCII fractions (¼→1/4, ½→1/2, …)
+    //    SAFEGUARD: do NOT replace if glyph is embedded inside a word (letters on either side)
+    $map = [
+        "¼" => "1/4", "½" => "1/2", "¾" => "3/4",
+        "⅐" => "1/7", "⅑" => "1/9", "⅒" => "1/10",
+        "⅓" => "1/3", "⅔" => "2/3",
+        "⅕" => "1/5", "⅖" => "2/5", "⅗" => "3/5", "⅘" => "4/5",
+        "⅙" => "1/6", "⅚" => "5/6",
+        "⅛" => "1/8", "⅜" => "3/8", "⅝" => "5/8", "⅞" => "7/8",
+    ];
+    $chars = implode('', array_map('preg_quote', array_keys($map)));
+    $s = preg_replace_callback('/(?<![A-Za-zÀ-ÖØ-öø-ÿ])(['.$chars.'])(?![A-Za-zÀ-ÖØ-öø-ÿ])/u', function($m) use ($map) {
+        $g = $m[1];
+        return $map[$g] ?? $g;
+    }, $s) ?? $s;
 
-    // c) Dezimal oder Ganzzahl am Anfang
-    if (preg_match('/^\s*(\d+(?:\.\d+)?)/u', $s, $m)) {
-        return (float)$m[1];
-    }
+    // 3b) Ensure a space between an integer and an immediately following ASCII fraction (e.g., "11/2" -> "1 1/2")
+    $s = preg_replace('/(?<=\d)(?=\d\/\d)/', ' ', $s) ?? $s;
 
-    // d) Textuelle halbe-Angaben auf Basis des Lexikons
-    if ($lex && !empty($lex['fraction_words']) && function_exists('sitc_slugify_lite') && function_exists('sitc_ing_match_patterns')) {
-        $slug = sitc_slugify_lite($rawSource);
-        if ($slug !== '' && sitc_ing_match_patterns($slug, $lex['fraction_words'])) {
-            $countable = $lex['countable_nouns'] ?? [];
-            if (!$countable || sitc_ing_match_patterns($slug, $countable)) {
-                return 0.5;
-            }
-        }
-    }
+    // 4) Decimal comma only when between digits: "0,75" -> "0.75"
+    $s = preg_replace('/(?<=\d),(?=\d)/', '.', $s) ?? $s;
 
-    return null;
+    // 5) Multiplier: × -> x and normalize spacing: "2x200" -> "2 x 200"
+    $s = str_replace("×", "x", $s);
+    $s = preg_replace('/(\d)\s*[xX]\s*(\d)/', '$1 x $2', $s) ?? $s;
+
+    // 6) Tolerance markers (remove as words, including optional dot): "ca.", "circa", "etwa", "ungefähr/ungefaehr", "approx", "~"
+    $s = preg_replace('/(?<!\S)(?:ca|circa|etwa|ungef(?:ae|ä)hr|approx|~)\.?/iu', ' ', $s) ?? $s;
+
+    // 6b) If tolerance removal left a stray leading dot before a number, strip it: ". 0.75" -> "0.75"
+    $s = preg_replace('/^\s*\.\s*(?=\d)/', '', $s) ?? $s;
+
+    // 7) Whitespace normalization
+    $s = preg_replace('/\s+/u', ' ', $s) ?? $s;
+    $s = trim($s);
+
+    return $s;
 }
 }

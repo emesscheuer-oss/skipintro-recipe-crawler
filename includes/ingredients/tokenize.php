@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+
 /**
  * Normalizes ingredient lines for modular parsing (qty/unit/note detection).
  */
@@ -7,8 +7,13 @@ if (!function_exists('sitc_ing_tokenize')) {
 function sitc_ing_tokenize(string $line, string $locale = 'de'): array {
     $raw = (string)$line;
     $norm = $raw;
+    // Pre-normalize qty/units
+    if (function_exists('sitc_qty_normalize')) { $norm = sitc_qty_normalize($norm); }
 
     // 0) Normalize NBSP variants to regular spaces
+
+    // 0b) Normalize en/em dash to hyphen-minus
+    $norm = str_replace(["\xE2\x80\x93", "\xE2\x80\x94"], "-", $norm);
     $norm = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $norm) ?? $norm;
 
     // 1) Remove qty-context stopwords (ca., etwa, approx.)
@@ -24,7 +29,7 @@ function sitc_ing_tokenize(string $line, string $locale = 'de'): array {
     }
 
     // Ensure numeric ranges use en dash consistently
-    $norm = preg_replace('/(?<=\d)\s*[-\\u{2013}\x{2014}]\s*(?=\d)/u', "\\u{2013}", $norm) ?? $norm;
+    $norm = preg_replace('/(?<=\d)\s*[-\\x{2013}\x{2014}]\s*(?=\d)/u', "\\x{2013}", $norm) ?? $norm;
 
     // 3) Mixed unicode vulgar fractions attached to integers (e.g. 1 1/2)
     $unicodeDecimal = [
@@ -77,7 +82,7 @@ function sitc_ing_tokenize(string $line, string $locale = 'de'): array {
 
     // Extract range if present at line start: a – b
     $range = null;
-    if (preg_match('/^(\d+(?:\.\d+)?)\s*[\\u{2013}-]\s*(\d+(?:\.\d+)?)/u', $norm, $rm)) {
+    if (preg_match('/^(\d+(?:\.\d+)?)\s*[\\x{2013}-]\s*(\d+(?:\.\d+)?)/u', $norm, $rm)) {
         $low = (float)$rm[1];
         $high = (float)$rm[2];
         if ($high >= $low) {
@@ -90,4 +95,3 @@ function sitc_ing_tokenize(string $line, string $locale = 'de'): array {
     return ['raw' => $raw, 'norm' => $norm, 'range' => $range];
 }
 }
-

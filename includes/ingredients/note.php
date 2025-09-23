@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+
 require_once __DIR__ . '/i18n.php';
 
 /**
@@ -218,4 +218,3 @@ function sitc_ing_extract_item_note(array $tok, $qty, ?string $unit, string $loc
     return ['item' => $item, 'note' => $finalNote];
 }
 }
-

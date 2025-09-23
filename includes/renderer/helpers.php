@@ -91,4 +91,3 @@ function sitc_format_qty_de($val) {
     return rtrim(rtrim($s, '0'), ',');
 }
 }
-

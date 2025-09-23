@@ -23,4 +23,3 @@ run_one(__DIR__ . '/fixtures/butter_chicken.jsonld');
 run_one(__DIR__ . '/fixtures/ente_chop_suey.html');
 run_one(__DIR__ . '/fixtures/biryani.html');
 run_one(__DIR__ . '/fixtures/haehnchen_biryani.html');
-

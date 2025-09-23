@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+
 /**
  * Unit-Erkennung: mappt Token neben der Menge auf kanonische Einheitencodes.
  */

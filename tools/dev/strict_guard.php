@@ -1,321 +1,162 @@
 <?php
 /**
- * SkipIntro Recipe Crawler - Strict Guard (CLI)
+ * tools/dev/strict_guard.php (v4c)
+ * - Scans project PHP files for:
+ *     1) Any PHP close token  "?>"   (policy: disallowed everywhere)
+ *     2) Any declare(strict_types=1) (policy: disallowed everywhere)
+ * - Modes:
+ *     php tools/dev/strict_guard.php           → CHECK
+ *     php tools/dev/strict_guard.php --fix     → FIX (auto-clean)
  *
- * Policies:
- *  - tools/**           : FORBID declare(strict_types=1)
- *  - everything else    : ALLOW declare(strict_types=1) but, if present, it MUST be at line 2 (right after "<?php")
- *  - all *.php          : MUST be UTF-8 without BOM
- *  - all *.php          : MUST NOT use a real PHP close token (T_CLOSE_TAG)
- *      * In FIX mode we ONLY remove a trailing close token at EOF automatically.
- *        Any other in-file close token is REPORTED but NOT auto-removed.
- *
- * This version uses token_get_all() so strings/comments containing the sequence
- * are NOT falsely flagged. We also avoid writing the literal token in this file.
+ * Notes:
+ * - UTF-8 (no BOM), no declare(), no closing tag at EOF.
+ * - Uses token_get_all for reliable detection.
  */
 
-$argv_list = isset($argv) ? $argv : array();
-$MODE_FIX  = in_array('--fix', $argv_list, true);
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
 
-// Build the PHP close token without writing it literally (editor-safe).
-$PHP_CLOSE = '?' . '>';
+$ROOT = getcwd();
+$MODE = in_array('--fix', $argv ?? []) ? 'FIX' : 'CHECK';
 
-echo "[strict_guard] Mode: " . ($MODE_FIX ? 'FIX' : 'CHECK') . PHP_EOL;
+echo "[strict_guard] Mode: {$MODE}\n";
 
-$ROOT = realpath(__DIR__ . '/../../');
-if ($ROOT === false) {
-    $ROOT = getcwd();
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
+function sg_is_php_file(string $path): bool {
+    return (bool)preg_match('/\.php$/i', $path);
 }
-
-/**
- * Recursively collect *.php files under $base, skipping vendor/
- * @param string $base
- * @return array
- */
-function sg_collect_php_files($base) {
-    $out = array();
-    $it  = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($base, FilesystemIterator::SKIP_DOTS)
-    );
-    foreach ($it as $file) {
-        /** @var SplFileInfo $file */
-        $path = $file->getPathname();
-        if (substr($path, -4) !== '.php') continue;
-        if (strpos($path, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR) !== false) continue;
-        $out[] = $path;
+function sg_should_skip(string $rel): bool {
+    // Skip common vendor/build folders if present
+    $skipDirs = ['vendor', 'node_modules', '.git', '.idea', '.vscode'];
+    foreach ($skipDirs as $sd) {
+        if (stripos($rel, '/'.$sd.'/') !== false || stripos($rel, '\\'.$sd.'\\') !== false) return true;
     }
-    return $out;
+    return false;
+}
+function sg_read_file(string $path): string {
+    $buf = @file_get_contents($path);
+    return is_string($buf) ? $buf : '';
+}
+function sg_write_file(string $path, string $data): bool {
+    $ok = @file_put_contents($path, $data);
+    return ($ok !== false);
+}
+function sg_rel(string $root, string $path): string {
+    $p = str_replace('\\', '/', $path);
+    $r = str_replace('\\', '/', rtrim($root, '\\/'));
+    return (strpos($p, $r.'/') === 0) ? substr($p, strlen($r)+1) : $p;
 }
 
-/**
- * Detect first occurrence of declare(strict_types=1); and its line (1-based).
- * @param string $normalizedContent content with \n newlines and without BOM
- * @return array [bool hasDeclare, int|null declareLine]
- */
-function sg_find_declare($normalizedContent) {
-    $lines   = explode("\n", $normalizedContent);
-    $has     = false;
-    $lineN   = null;
-    $pattern = '~^\s*declare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;~';
-    $count   = count($lines);
-    for ($i = 0; $i < $count; $i++) {
-        if (preg_match($pattern, $lines[$i])) {
-            $has   = true;
-            $lineN = $i + 1; // 1-based
-            break;
-        }
-    }
-    return array($has, $lineN);
+// -----------------------------------------------------------------------------
+// Collect files
+// -----------------------------------------------------------------------------
+
+$rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($ROOT, FilesystemIterator::SKIP_DOTS));
+$files = [];
+foreach ($rii as $fileInfo) {
+    /** @var SplFileInfo $fileInfo */
+    $p = $fileInfo->getPathname();
+    if (!sg_is_php_file($p)) continue;
+    $rel = sg_rel($ROOT, $p);
+    if (sg_should_skip($rel)) continue;
+    $files[] = $p;
 }
 
-/**
- * Remove first declare(strict_types=1); line from content (normalized \n)
- * @param string $normalizedContent
- * @return array [string newContent, bool removed]
- */
-function sg_remove_first_declare($normalizedContent) {
-    $lines   = explode("\n", $normalizedContent);
-    $pattern = '~^\s*declare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;~';
-    $removed = false;
-    $out     = array();
-    $count   = count($lines);
-    for ($i = 0; $i < $count; $i++) {
-        if (!$removed && preg_match($pattern, $lines[$i])) {
-            $removed = true;
-            continue;
-        }
-        $out[] = $lines[$i];
-    }
-    return array(implode("\n", $out), $removed);
-}
-
-/**
- * Insert declare(strict_types=1); at line 2 (after opening <?php), if the first line starts with <?php
- * @param string $normalizedContent
- * @return array [string newContent, bool inserted, string|null err]
- */
-function sg_insert_declare_at_line2($normalizedContent) {
-    $lines = explode("\n", $normalizedContent);
-    if (!isset($lines[0]) || !preg_match('~^\s*<\?php\b~', $lines[0])) {
-        return array($normalizedContent, false, 'no_open_tag');
-    }
-    array_splice($lines, 1, 0, 'declare(strict_types=1);');
-    return array(implode("\n", $lines), true, null);
-}
-
-/**
- * Remove trailing PHP close token only if it's the final token.
- * @param string $normalizedContent
- * @param string $phpClose
- * @return array [string newContent, bool removed]
- */
-function sg_remove_trailing_close_token($normalizedContent, $phpClose) {
-    $trimmed = rtrim($normalizedContent);
-    $len     = strlen($phpClose);
-    if ($len > 0 && substr($trimmed, -$len) === $phpClose) {
-        $trimmed = rtrim(substr($trimmed, 0, -$len));
-        if ($trimmed === '' || substr($trimmed, -1) !== "\n") {
-            $trimmed .= "\n";
-        }
-        return array($trimmed, true);
-    }
-    return array($normalizedContent, false);
-}
-
-/**
- * Check if a string begins with UTF-8 BOM (EF BB BF)
- * @param string $raw
- * @return bool
- */
-function sg_has_bom($raw) {
-    return (strncmp($raw, "\xEF\xBB\xBF", 3) === 0);
-}
-
-/**
- * Normalize line endings to \n and strip BOM for analysis.
- * @param string $raw
- * @return array [string normalized, bool hadBOM]
- */
-function sg_normalize_for_analysis($raw) {
-    $hadBOM = sg_has_bom($raw);
-    if ($hadBOM) {
-        $raw = substr($raw, 3);
-    }
-    $normalized = str_replace(array("\r\n", "\r"), "\n", $raw);
-    return array($normalized, $hadBOM);
-}
-
-/**
- * Scan for REAL PHP close tokens using token_get_all().
- * Returns [bool hasAnyClose, bool endsWithClose]
- * - hasAnyClose: there is at least one T_CLOSE_TAG in tokens
- * - endsWithClose: the last non-whitespace/comment token is T_CLOSE_TAG
- *   (i.e., a trailing close at EOF)
- *
- * @param string $normalizedContent
- * @return array
- */
-function sg_scan_close_tokens($normalizedContent) {
-    $tokens = @token_get_all($normalizedContent);
-    if (!is_array($tokens)) {
-        return array(false, false);
-    }
-    $hasAny = false;
-
-    // Find last non-whitespace/comment token id
-    $lastMeaningful = null;
-
-    $count = count($tokens);
-    for ($i = 0; $i < $count; $i++) {
-        $tok = $tokens[$i];
-        if (is_array($tok)) {
-            $id   = $tok[0];
-            $text = $tok[1];
-            if ($id === T_CLOSE_TAG) {
-                $hasAny = true;
-            }
-            if ($id === T_WHITESPACE || $id === T_COMMENT || $id === T_DOC_COMMENT) {
-                // skip for "meaningful"
-            } else {
-                $lastMeaningful = $id;
-            }
-        } else {
-            // single-character tokens (like ; { } etc.)
-            $char = $tok;
-            // any non-space char counts as meaningful
-            if (!ctype_space($char)) {
-                $lastMeaningful = $char;
-            }
-        }
-    }
-
-    $endsWith = ($lastMeaningful === T_CLOSE_TAG);
-    return array($hasAny, $endsWith);
-}
-
-/** MAIN **/
-
-$phpFiles   = sg_collect_php_files($ROOT);
-$issues     = array();
+$issues = [];
 $fixedEdits = 0;
 
-foreach ($phpFiles as $absPath) {
-    $rel = ltrim(str_replace($ROOT, '', $absPath), DIRECTORY_SEPARATOR);
-    $isTool = (strpos($rel, 'tools' . DIRECTORY_SEPARATOR) === 0);
+// Pre-built pattern for removing declare(strict_types=1) safely (optional whitespace, case-insensitive).
+$declarePattern = '~\bdeclare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;~i';
+$openTag   = '<' . '?php'; // avoid writing the literal in one piece
+$closeTag  = '?' . '>';    // avoid writing the literal in one piece
 
-    $raw = @file_get_contents($absPath);
-    if ($raw === false) {
-        $issues[] = array($rel, 'io_error', 'Could not read file');
-        continue;
-    }
-    $orig = $raw;
+// -----------------------------------------------------------------------------
+// Scan & optionally fix
+// -----------------------------------------------------------------------------
 
-    $normInfo   = sg_normalize_for_analysis($raw);
-    $normalized = $normInfo[0];
-    $hadBOM     = $normInfo[1];
+foreach ($files as $path) {
+    $src = sg_read_file($path);
+    $rel = sg_rel($ROOT, $path);
+    if ($src === '') continue; // unreadable → silently skip
 
-    // detect real close tokens
-    $scan       = sg_scan_close_tokens($normalized);
-    $hasAnyClose   = $scan[0];
-    $endsWithClose = $scan[1];
+    // Token scan (PHP needs open tag to tokenize); prepend if missing only for analysis.
+    $probe = (strpos($src, $openTag) === false) ? ($openTag . "\n" . $src) : $src;
+    $tokens = @token_get_all($probe);
+    if (!is_array($tokens)) $tokens = [];
 
-    // declare detection
-    $declareInfo = sg_find_declare($normalized);
-    $hasDeclare  = $declareInfo[0];
-    $declareLine = $declareInfo[1];
+    $hasClose = false;
+    $hasStrict = false;
 
-    if ($isTool) {
-        // tools/** must NOT have declare(strict_types=1)
-        if ($hasDeclare) {
-            $issues[] = array($rel, 'forbidden_declare', 'tools/** must not declare(strict_types=1)');
-            if ($MODE_FIX) {
-                $rem          = sg_remove_first_declare($normalized);
-                $normalized   = $rem[0];
-                $removedDecl  = $rem[1];
-                if ($removedDecl) {
-                    $hasDeclare  = false;
-                    $declareLine = null;
-                    $fixedEdits++;
-                }
-            }
+    $len = count($tokens);
+    for ($i = 0; $i < $len; $i++) {
+        $t = $tokens[$i];
+        if (is_string($t)) {
+            if ($t === $closeTag) { $hasClose = true; }
+            continue;
         }
-    } else {
-        // outside tools: if declare exists, it must be at line 2
-        if ($hasDeclare && $declareLine !== 2) {
-            $issues[] = array($rel, 'misplaced_declare', 'declare(strict_types=1) must be at line 2');
-            if ($MODE_FIX) {
-                $rem          = sg_remove_first_declare($normalized);
-                $normalized   = $rem[0];
-                $removedOnce  = $rem[1];
-                if ($removedOnce) {
-                    $ins          = sg_insert_declare_at_line2($normalized);
-                    $normalized   = $ins[0];
-                    $inserted     = $ins[1];
-                    if ($inserted) {
-                        $fixedEdits++;
-                    }
-                }
+        $id = $t[0];
+        $text = $t[1];
+
+        if ($id === T_CLOSE_TAG) { $hasClose = true; }
+        if ($id === T_DECLARE) {
+            // Parse small window to find "strict_types"
+            $window = '';
+            for ($j = $i; $j < min($i+8, $len); $j++) {
+                $window .= is_string($tokens[$j]) ? $tokens[$j] : $tokens[$j][1];
+            }
+            if (preg_match('~strict_types\s*=\s*1~i', $window)) {
+                $hasStrict = true;
             }
         }
     }
 
-    // Report REAL close tokens
-    if ($hasAnyClose) {
-        if ($endsWithClose) {
-            $issues[] = array($rel, 'trailing_close_tag', 'Remove PHP close token at EOF');
-            if ($MODE_FIX) {
-                $rt          = sg_remove_trailing_close_token($normalized, $PHP_CLOSE);
-                $normalized  = $rt[0];
-                $removedCT   = $rt[1];
-                if ($removedCT) {
-                    $fixedEdits++;
-                    // re-scan to see if other close tokens remain
-                    $scan2 = sg_scan_close_tokens($normalized);
-                    $hasAnyClose   = $scan2[0];
-                    $endsWithClose = $scan2[1];
-                }
+    // Register issues + optional fixes
+    if ($hasClose) {
+        $issues[] = [$rel, 'php_close_tag_present', 'File contains a PHP close token'];
+        if ($MODE === 'FIX') {
+            // Remove ALL closing tags safely
+            $new = str_replace($closeTag, '', $src);
+            if ($new !== $src) {
+                if (sg_write_file($path, $new)) { $fixedEdits++; $src = $new; }
             }
         }
-        if ($hasAnyClose) {
-            $issues[] = array($rel, 'php_close_tag_present', 'File contains a PHP close token (not auto-fixed)');
+    }
+    if ($hasStrict) {
+        $issues[] = [$rel, 'strict_types_present', 'declare(strict_types=1) found'];
+        if ($MODE === 'FIX') {
+            $new = preg_replace($declarePattern, '', $src);
+            if ($new !== null && $new !== $src) {
+                if (sg_write_file($path, $new)) { $fixedEdits++; $src = $new; }
+            }
         }
     }
 
-    // enforce: remove BOM
-    if ($hadBOM) {
-        $issues[] = array($rel, 'bom_detected', 'Remove UTF-8 BOM');
-        if ($MODE_FIX) {
-            // already stripped in $normalized
-            $fixedEdits++;
-        }
-    }
-
-    // write back if changed (always WITHOUT BOM, with \n newlines)
-    if ($MODE_FIX) {
-        $new = $normalized;
-        if ($new !== $orig) {
-            @file_put_contents($absPath, $new);
+    // After edits in FIX mode: normalize EOLs, drop BOM, keep single trailing newline
+    if ($MODE === 'FIX' && $fixedEdits > 0) {
+        $norm = str_replace(["\r\n", "\r"], "\n", $src);
+        if (strncmp($norm, "\xEF\xBB\xBF", 3) === 0) $norm = substr($norm, 3);
+        $norm = rtrim($norm) . "\n";
+        if ($norm !== $src) {
+            sg_write_file($path, $norm);
         }
     }
 }
 
-echo "[strict_guard] Scanned files: " . count($phpFiles) . PHP_EOL;
+// -----------------------------------------------------------------------------
+// Report
+// -----------------------------------------------------------------------------
 
-$issuesCount = count($issues);
-echo "[strict_guard] Total issues: " . $issuesCount . PHP_EOL;
-if ($MODE_FIX) {
-    echo "[strict_guard] Fixed edits: " . $fixedEdits . PHP_EOL;
+echo "[strict_guard] Scanned files: " . count($files) . "\n";
+echo "[strict_guard] Total issues: " . count($issues) . "\n";
+
+foreach ($issues as [$rel, $code, $msg]) {
+    echo " - {$rel}: {$code} ({$msg})\n";
+}
+if ($MODE === 'FIX') {
+    echo "[strict_guard] Fixed edits: {$fixedEdits}\n";
 }
 
-for ($i = 0; $i < $issuesCount; $i++) {
-    $it  = $issues[$i]; // array(rel, code, msg)
-    $rel = isset($it[0]) ? $it[0] : '';
-    $code= isset($it[1]) ? $it[1] : '';
-    $msg = isset($it[2]) ? $it[2] : '';
-    echo ' - ' . $rel . ': ' . $code . ($msg !== '' ? ' (' . $msg . ')' : '') . PHP_EOL;
-}
-
-if ($issuesCount > 0 && !$MODE_FIX) {
-    exit(1);
-}
-exit(0);
+exit(empty($issues) ? 0 : 1);

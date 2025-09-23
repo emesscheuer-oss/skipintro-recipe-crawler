@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+
 if (!defined('ABSPATH')) exit;
 
 // Ingredient parser version (for cache invalidation of stored structured ingredients)

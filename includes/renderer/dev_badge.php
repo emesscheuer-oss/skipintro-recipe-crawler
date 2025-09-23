@@ -224,4 +224,3 @@ function sitc_render_dev_badge(array $payload, array $opts = []): string
 
     return $html;
 }
-

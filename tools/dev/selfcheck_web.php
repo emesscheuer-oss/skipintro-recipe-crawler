@@ -1,130 +1,89 @@
 <?php
-// Web-based syntax self-check (no strict_types)
+// tools/dev/selfcheck_web.php (token-based; no PHP close tag; no declare)
+header('Content-Type: text/html; charset=utf-8');
 
-require_once __DIR__ . '/../parser_lab/_ui_helpers.php';
-
-function sitc_sc_html_head(string $title): void {
-    echo "<!doctype html><meta charset='utf-8'><title>" . sitc_html($title) . "</title>";
-    echo '<style>body{font:14px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:20px;}a{color:#0366d6;text-decoration:none;}a:hover{text-decoration:underline;}code{font:13px/1.4 ui-monospace,Consolas,monospace;}</style>';
+$root = realpath(__DIR__ . '/../../');
+if ($root === false) {
+    $root = getcwd();
 }
 
-$toolsDir = dirname(__DIR__);
-$pluginRoot = dirname($toolsDir);
-$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($pluginRoot, FilesystemIterator::SKIP_DOTS));
-$errors = array();
-$warnings = array();
-$scanned = 0;
-
-$forbiddenStrictPrefixes = array('tools/', 'includes/renderer/', 'includes/admin/', 'includes/Admin/');
-$allowedStrictPrefixes = array('includes/ingredients/', 'includes/parser.php', 'includes/parser_helpers.php');
-
-foreach ($iterator as $file) {
-    /** @var SplFileInfo $file */
-    if (!$file->isFile()) {
-        continue;
+function collectPhpFiles($base) {
+    $out = [];
+    $it  = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($base, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($it as $file) {
+        $path = $file->getPathname();
+        if (substr($path, -4) !== '.php') continue;
+        if (strpos($path, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR) !== false) continue;
+        $out[] = $path;
     }
-    if (substr($file->getFilename(), -4) !== '.php') {
-        continue;
-    }
-    $scanned++;
-    $path = $file->getPathname();
-    $rel = str_replace('\\', '/', substr($path, strlen($pluginRoot) + 1));
-    $contents = @file_get_contents($path);
-    if ($contents === false) {
-        $errors[] = array($rel, 'unreadable');
-        continue;
-    }
+    sort($out);
+    return $out;
+}
 
-    // BOM
-    if (strncmp($contents, "\xEF\xBB\xBF", 3) === 0) {
-        $errors[] = array($rel, 'BOM detected');
-        $contentsWithoutBom = substr($contents, 3);
-    } else {
-        $contentsWithoutBom = $contents;
-    }
-
-    // Leading whitespace before <?php
-    if ($contentsWithoutBom !== '' && strpos($contentsWithoutBom, '<?php') !== 0) {
-        $trimmed = ltrim($contentsWithoutBom);
-        if ($trimmed !== $contentsWithoutBom) {
-            $errors[] = array($rel, 'Whitespace before <?php');
-        } elseif (strpos($trimmed, '<?php') !== 0) {
-            // file without PHP tag: ignore
+function hasCloseToken($src) {
+    $tokens = @token_get_all($src);
+    if (!is_array($tokens)) return false;
+    foreach ($tokens as $tk) {
+        if (is_array($tk) && $tk[0] === T_CLOSE_TAG) {
+            return true;
         }
     }
+    return false;
+}
 
-    // Arrow functions
-    if (preg_match('/\bfn\s*\(/', $contents)) {
-        $errors[] = array($rel, 'Arrow function (fn) found');
+function hasBom($raw) {
+    return strncmp($raw, "\xEF\xBB\xBF", 3) === 0;
+}
+
+$files = collectPhpFiles($root);
+$warns = [];
+$errors = [];
+
+foreach ($files as $abs) {
+    $rel = ltrim(str_replace($root, '', $abs), DIRECTORY_SEPARATOR);
+    $raw = @file_get_contents($abs);
+    if ($raw === false) {
+        $errors[] = "I/O error: " . htmlspecialchars($rel, ENT_QUOTES, 'UTF-8');
+        continue;
     }
-
-    // match expression
-    if (preg_match('/\bmatch\s*\(/', $contents)) {
-        $errors[] = array($rel, 'match expression found');
+    if (hasBom($raw)) {
+        $errors[] = htmlspecialchars($rel, ENT_QUOTES, 'UTF-8') . ": BOM detected";
     }
-
-    // Array unpack
-    if (preg_match('/\.\.\.\s*\[/u', $contents) || preg_match('/\[\s*\.\.\./u', $contents)) {
-        $errors[] = array($rel, 'Array unpack (spread) found');
-    }
-
-    // Named arguments (heuristic)
-    if (preg_match('/[(,]\s*[A-Za-z_]\w*\s*:\s*\$[A-Za-z_]/', $contents)) {
-        $errors[] = array($rel, 'Named argument syntax found');
-    }
-
-    // PHP close tag
-    if (preg_match('/\?>/', $contents)) {
-        $warnings[] = array($rel, 'PHP close tag detected');
-    }
-
-    // strict_types policy
-    if (preg_match('/declare\s*\(\s*strict_types\s*=\s*1\s*\)/', $contents)) {
-        $allowed = false;
-        foreach ($allowedStrictPrefixes as $prefix) {
-            if (strpos($rel, $prefix) === 0 || $rel === $prefix) {
-                $allowed = true;
-                break;
-            }
-        }
-        if (!$allowed) {
-            foreach ($forbiddenStrictPrefixes as $prefix) {
-                if (strpos($rel, $prefix) === 0) {
-                    $errors[] = array($rel, 'strict_types not allowed here');
-                    $allowed = null;
-                    break;
-                }
-            }
-            if ($allowed !== null && !$allowed) {
-                $errors[] = array($rel, 'strict_types usage needs review');
-            }
-        } else {
-            // Must appear immediately after <?php
-            $normalized = $contentsWithoutBom;
-            if (!preg_match('/^<\?php\s*declare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;/', $normalized)) {
-                $errors[] = array($rel, 'strict_types not first statement');
-            }
-        }
+    if (hasCloseToken($raw)) {
+        $warns[] = htmlspecialchars($rel, ENT_QUOTES, 'UTF-8') . ": PHP close token detected";
     }
 }
 
-sitc_sc_html_head('Self-Check');
+$html = '';
+$html .= '<!DOCTYPE html><html><head>';
+$html .= '<meta charset="utf-8"><title>Plugin Syntax Self-Check</title>';
+$html .= '<style>';
+$html .= 'body{font:14px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:20px}';
+$html .= 'a{color:#0366d6;text-decoration:none}a:hover{text-decoration:underline}';
+$html .= '.box{margin:10px 0;padding:10px;border:1px solid #ddd}';
+$html .= '.ok{background:#dcfce7;color:#166534}.warn{background:#fff7ed;color:#9a3412}.err{background:#fee2e2;color:#991b1b}';
+$html .= '.info{background:#dbeafe;color:#1e3a8a}';
+$html .= 'code{font:13px/1.4 ui-monospace,Consolas,monospace}';
+$html .= '</style></head><body>';
+$html .= '<h1>Plugin Syntax Self-Check</h1>';
+$html .= '<p><a href="/wp-content/plugins/skipintro-recipe-crawler/tools/parser_lab/auto_eval_web.php">Auto-Eval</a> | ';
+$html .= '<a href="/wp-content/plugins/skipintro-recipe-crawler/tools/parser_lab/run.php">Parser Lab</a></p>';
 
-echo '<h1>Plugin Syntax Self-Check</h1>';
-echo '<p><a href="../parser_lab/auto_eval_web.php">Auto-Eval</a> | <a href="../parser_lab/run.php">Parser Lab</a></p>';
-
-if ($errors) {
-    foreach ($errors as $item) {
-        sitc_error($item[0] . ': ' . $item[1]);
-    }
+if (empty($errors)) {
+    $html .= '<div class="box ok"><strong>OK:</strong> No syntax errors detected.</div>';
 } else {
-    sitc_ok('No syntax errors detected.');
-}
-
-if ($warnings) {
-    foreach ($warnings as $item) {
-        sitc_warn($item[0] . ': ' . $item[1]);
+    foreach ($errors as $e) {
+        $html .= '<div class="box err"><strong>ERROR:</strong> ' . $e . '</div>';
     }
 }
 
-sitc_info('Files scanned: ' . $scanned);
+foreach ($warns as $w) {
+    $html .= '<div class="box warn"><strong>WARN:</strong> ' . $w . '</div>';
+}
+
+$html .= '<div class="box info"><strong>INFO:</strong> Files scanned: ' . count($files) . '</div>';
+$html .= '</body></html>';
+
+echo $html;

@@ -120,4 +120,3 @@ function sitc_merge_ingredients_for_display(array $items): array {
     }
     return $out;
 }}
-

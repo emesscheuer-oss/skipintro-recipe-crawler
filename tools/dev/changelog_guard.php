@@ -68,4 +68,3 @@ for ($i = 0; $i < count($headers); $i++) {
 if (!$ok) exit(1);
 echo "Changelog order OK (newest-first).\n";
 exit(0);
-
