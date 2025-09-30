@@ -1,14 +1,16 @@
 <?php
 /*
-Plugin Name: Skip Intro Recipe Crawler
-Description: Importiert Rezepte von externen URLs (extrahiert JSON-LD Recipe-Daten) und speichert sie als Beiträge mit Kategorien & skalierbaren Zutaten.
-Version: 0.6.00
-Author: SKIP INTRO OHG
+Plugin Name: Skipintro Recipe Crawler
+Description: Importiert/aktualisiert Rezepte und rendert sie im Theme. Parser v2 + Normalizer; Refresh schreibt Schema & Struct neu.
+Version: 0.6.01
+Author: Skipintro
+License: GPL-2.0+
+Text Domain: skipintro
 */
 
 if (!defined('ABSPATH')) exit;
 
-// FRONTEND Output-Guard: entfernt führende Whitespaces/BOM-Ausgaben vor dem ersten Output.
+// FRONTEND Output-Guard: entfernt fÃ¼hrende Whitespaces/BOM-Ausgaben vor dem ersten Output.
 add_action('init', function () {
     if (is_admin()) return;
     if (!defined('SITC_OB_GUARD')) define('SITC_OB_GUARD', true);
@@ -17,7 +19,7 @@ add_action('init', function () {
             static $seen = false;
             if (!$seen) {
                 $seen = true;
-                // Nur führende Whitespaces kappen; echten Inhalt unverändert ausgeben.
+                // Nur fÃ¼hrende Whitespaces kappen; echten Inhalt unverÃ¤ndert ausgeben.
                 $trim = ltrim($buf);
                 return $trim;
             }
@@ -36,7 +38,10 @@ add_action('plugins_loaded', function () {
     // Debug logger (dev-only)
     require_once $base . 'includes/debug.php';
     // Media helpers (featured image)
-    require_once $base . 'includes/media.php';
+    require_once $base . 'includes/media.php';    // Toggle for legacy debug endpoints (enable manually when needed)
+    if (!defined('SITC_DEBUG_TOOLS')) {
+        define('SITC_DEBUG_TOOLS', false);
+    }
 
     // Global engine query override (no admin gating): ?engine=legacy|mod|auto
     if (isset($_GET['engine'])) {
@@ -50,11 +55,12 @@ add_action('plugins_loaded', function () {
         require_once $base . 'includes/parser.php';
         require_once $base . 'includes/admin-page.php';
         require_once $base . 'includes/refresh.php';
+		require_once __DIR__ . '/includes/refresh_v2_helpers.php';
         // Admin: Parser Validation page (Parser-Lab orchestration)
         require_once $base . 'includes/Admin/ValidationRunner.php';
         require_once $base . 'includes/Admin/ValidationPage.php';
 
-        // Admin-Menü nur im Admin registrieren.
+        // Admin-MenÃ¼ nur im Admin registrieren.
         add_action('admin_menu', function() {
             add_submenu_page(
                 'edit.php',

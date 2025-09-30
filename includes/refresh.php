@@ -345,7 +345,10 @@ function sitc_handle_refresh_recipe() {
     if ($warnings) {
         $detail .= '<p style="margin:6px 0 0;color:#a00;">' . esc_html(implode(' ', $warnings)) . '</p>';
     }
-    sitc_store_admin_notice('success', $summary, $detail);
+    // v2: Schema neu schreiben + Struct materialisieren
+	sitc_refresh_current_post_v2($post_id, false);
+
+	sitc_store_admin_notice('success', $summary, $detail);
 
     do_action('sitc_after_refresh', $post_id, $result, $changes, ['dry_run'=>$dry_run]);
 

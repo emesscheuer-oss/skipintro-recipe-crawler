@@ -9,6 +9,7 @@ function sitc_render_import_form() {
     $html = '';
 
     $html .= '<form method="post" class="sitc-import-form">';
+    $html .= wp_nonce_field('sitc_import_form', 'sitc_import_form_nonce', true, false);
     $html .= '<label>Rezept-URL:<br>';
     $html .= '<input type="url" name="sitc_recipe_url" size="60" required>';
     $html .= '</label>';
@@ -33,7 +34,17 @@ function sitc_render_import_form() {
     $html .= '<button type="submit" name="sitc_frontend_import" value="1">Import starten</button>';
     $html .= '</form>';
 
-    if (!empty($_POST['sitc_frontend_import']) && !empty($_POST['sitc_recipe_url'])) {
+    if (!empty($_POST['sitc_frontend_import'])) {
+        if (empty($_POST['sitc_import_form_nonce']) || !wp_verify_nonce($_POST['sitc_import_form_nonce'], 'sitc_import_form')) {
+            $html .= '<div class="sitc-error">Ung&uuml;ltige Anfrage.</div>';
+            return $html;
+        }
+
+        if (empty($_POST['sitc_recipe_url'])) {
+            $html .= '<div class="sitc-error">Bitte eine Rezept-URL angeben.</div>';
+            return $html;
+        }
+
         $url = esc_url_raw((string)$_POST['sitc_recipe_url']);
         try {
             $recipe = sitc_parse_recipe_from_url_v2($url);
@@ -103,7 +114,16 @@ function sitc_render_import_form() {
                 }
 
                 $image_url = !empty($recipe['image']) ? $recipe['image'] : '';
-                sitc_set_featured_image($post_id, $image_url, $all_cats);
+                sitc_maybe_set_featured_image($post_id, $image_url);
+                // --- Harmonisierung wie beim Refresh (v2 + Normalizer) ---
+                if (function_exists('sitc_refresh_current_post_v2')) {
+                    sitc_refresh_current_post_v2((int)$post_id, false);
+                }
+
+                // --- Fallback-Thumbnail sicherstellen ---
+                if (function_exists('sitc_assign_fallback_thumbnail_if_missing')) {
+                    sitc_assign_fallback_thumbnail_if_missing((int)$post_id);
+                }
 
                 $html .= '<div class="sitc-success">Rezept importiert! <a href="' . esc_url(get_permalink($post_id)) . '">ansehen</a></div>';
             } else {

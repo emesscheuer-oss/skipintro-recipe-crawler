@@ -1,9 +1,9 @@
 <?php
-// parse_line.php (v2f) — targeted fixes:
-// - Merge split fractions from modular path (e.g., qty=1 & item starts with "/2 …" → qty=0.5, trim "/2")
+// parse_line.php (v2f) â€” targeted fixes:
+// - Merge split fractions from modular path (e.g., qty=1 & item starts with "/2 â€¦" â†’ qty=0.5, trim "/2")
 // - If modular misses unit but item starts with unit word, extract it (e.g., "1.5 Liter Wasser")
-// - Textual half: "eine/einer halbe/halben ..." → qty=0.5
-// - Normalize fraction slash U+2044 (⁄) to '/'
+// - Textual half: "eine/einer halbe/halben ..." â†’ qty=0.5
+// - Normalize fraction slash U+2044 (â„) to '/'
 // - Robust prenorm: spaces, dashes, decimal comma, vulgar fractions, digit-letter spacing
 // UTF-8 (no BOM), no declare(), no closing tag.
 
@@ -11,29 +11,30 @@ require_once __DIR__ . '/i18n.php';
 $__sitc_qty = __DIR__ . '/qty.php';
 if (is_file($__sitc_qty)) { require_once $__sitc_qty; }
 
+// Optional: pre-QTY/Unit text normalizer
+$__sitc_norm = realpath(__DIR__ . '/../parser/filters/ingredient-text-normalizer.php');
+if ($__sitc_norm && is_file($__sitc_norm)) { @require_once $__sitc_norm; }
+
 /**
  * Conservative pre-normalization for parser.
  */
 function _sitc_ing_prenorm(string $s): string {
     // spaces: NBSP, NNBSP, thin spaces
-    $s = preg_replace('/[\x{00A0}\x{202F}\x{2009}\x{2008}]/u', ' ', $s) ?? $s;
-    // dashes (en/em)
-    $s = str_replace(['–', '—'], '-', $s);
-    // decimal comma -> dot when between digits
-    $s = preg_replace('/(?<=\d),(?=\d)/', '.', $s) ?? $s;
-    // normalize fraction slash (U+2044) to '/'
-    $s = str_replace('⁄', '/', $s);
-    // vulgar fractions -> ASCII
+    $s = preg_replace('/\x{00A0}|\x{202F}|\x{2009}/u', ' ', $s) ?? $s;
+    // unicode vulgar fractions â†’ ascii
     $map = [
-        '¼'=>'1/4','½'=>'1/2','¾'=>'3/4','⅐'=>'1/7','⅑'=>'1/9','⅒'=>'1/10',
-        '⅓'=>'1/3','⅔'=>'2/3','⅕'=>'1/5','⅖'=>'2/5','⅗'=>'3/5','⅘'=>'4/5',
-        '⅙'=>'1/6','⅚'=>'5/6','⅛'=>'1/8','⅜'=>'3/8','⅝'=>'5/8','⅞'=>'7/8',
+        'Â¼'=>'1/4','Â½'=>'1/2','Â¾'=>'3/4',
+        'â…'=>'1/7','â…‘'=>'1/9','â…’'=>'1/10','â…“'=>'1/3','â…”'=>'2/3','â…•'=>'1/5','â…–'=>'2/5','â…—'=>'3/5','â…˜'=>'4/5','â…™'=>'1/6','â…š'=>'5/6','â…›'=>'1/8','â…œ'=>'3/8','â…'=>'5/8','â…ž'=>'7/8',
     ];
     $s = strtr($s, $map);
-    // ensure space for mixed number "1 1/2" when original had "11/2"
-    $s = preg_replace('/(?<=\d)(?=\d\/\d)/', ' ', $s) ?? $s;
-    // insert space between digit and following letters/%/µ (helps "750g" -> "750 g")
-    $s = preg_replace('/(?<=\d)(?=[A-Za-zÄÖÜäöüµ%])/', ' ', $s) ?? $s;
+    // normalize fraction slash (U+2044) to regular slash
+    $s = str_replace('â„', '/', $s);
+    // Decimal comma â†’ dot (but keep thousand separators away)
+    $s = preg_replace('/(?<=\d),(?=\d)/', '.', $s) ?? $s;
+    // normalize dashes with single spaces
+    $s = preg_replace('/\s*[-â€“â€”]\s*/u', ' - ', $s) ?? $s;
+    // insert space between digit and following letters/%/Âµ (helps "750g" -> "750 g")
+    $s = preg_replace('/(?<=\d)(?=[A-Za-zÃ„Ã–ÃœÃ¤Ã¶Ã¼Âµ%])/', ' ', $s) ?? $s;
     // collapse spaces
     $s = preg_replace('/\s+/u', ' ', $s) ?? $s;
     return trim($s);
@@ -151,6 +152,10 @@ function _sitc_ing_parse_simple(string $line, array $units): array {
  * Public v2 parser: modular pipeline if available, otherwise simple fallback.
  */
 function sitc_ing_v2_parse_line(string $line, string $locale = 'de'): array {
+    // Pre-normalizer ensures the normalizer runs across all v2 paths (frontend, refresh, lab)
+    if (class_exists('Skipintro\\RecipeCrawler\\Parser\\Filters\\Ingredient_Text_Normalizer')) {
+        $line = \Skipintro\RecipeCrawler\Parser\Filters\Ingredient_Text_Normalizer::normalize($line);
+    }
     $raw = (string)$line;
     $norm = _sitc_ing_prenorm($raw);
     if (function_exists('sitc_qty_normalize')) {
@@ -158,7 +163,7 @@ function sitc_ing_v2_parse_line(string $line, string $locale = 'de'): array {
     }
 
     // Units (for post-fixes and fallback)
-    $units = ['g','kg','mg','l','ml','Liter','EL','TL','Prise','Stk','Stück','Stueck','Bund','Dose','Tasse','Becher','Pck','Pck.','Paket','Scheibe','Zehe','Knolle','Paar'];
+    $units = ['g','kg','mg','l','ml','Liter','EL','TL','Prise','Stk','StÃ¼ck','Stueck','Bund','Dose','Tasse','Becher','Pck','Pck.','Paket','Scheibe','Zehe','Knolle','Paar'];
     if (function_exists('sitc_ing_units_for_locale')) {
         $lex = sitc_ing_units_for_locale($locale);
         if (!empty($lex['units']) && is_array($lex['units'])) {
@@ -254,6 +259,10 @@ function sitc_ing_v2_parse_line(string $line, string $locale = 'de'): array {
 
 if (!function_exists('sitc_ing_parse_line_mod')) {
     function sitc_ing_parse_line_mod(string $line, string $locale = 'de'): array {
+        // << NEU: Nur im mod-Pfad voranstellen â€“ QTY/Unit-Logik bleibt unberÃ¼hrt >>
+        if (class_exists('Skipintro\\RecipeCrawler\\Parser\\Filters\\Ingredient_Text_Normalizer')) {
+            $line = \Skipintro\RecipeCrawler\Parser\Filters\Ingredient_Text_Normalizer::normalize($line);
+        }
         return sitc_ing_v2_parse_line($line, $locale);
     }
 }

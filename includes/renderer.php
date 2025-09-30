@@ -184,3 +184,88 @@ add_filter('the_content', function($content){
     if ($block === '') return $content;
     return $content . "\n\n" . $block;
 }, 9999);
+
+
+// --- SITC: Force v2 parser on refresh/import (root-cause fix) ---
+if (!function_exists('sitc_refresh_force_v2_parser')) {
+    /**
+     * Re-parse recipeIngredient from RAW using v2 + Normalizer during refresh/import.
+     * - Updates only the _sitc_schema_recipe_json payload.
+     * - Makes a backup of the previous schema JSON.
+     */
+    function sitc_refresh_force_v2_parser(int $post_id): void {
+        // Only run on our recipe post type (adjust if needed)
+        $pt = get_post_type($post_id);
+        if ($pt !== 'post' && $pt !== 'recipe') { return; } // <- ggf. anpassen
+
+        $schema_key = '_sitc_schema_recipe_json';
+        $old_json   = get_post_meta($post_id, $schema_key, true);
+        if (!is_string($old_json) || $old_json === '') { return; }
+
+        $schema = json_decode($old_json, true);
+        if (!is_array($schema) || empty($schema['recipeIngredient'])) { return; }
+
+        // Collect RAW lines (string or ['raw'=>...])
+        $rawLines = [];
+        $src = is_array($schema['recipeIngredient']) ? $schema['recipeIngredient'] : [$schema['recipeIngredient']];
+        foreach ($src as $entry) {
+            if (is_array($entry) && isset($entry['raw']) && is_string($entry['raw'])) {
+                $t = trim($entry['raw']);
+            } else {
+                $t = trim((string)$entry);
+            }
+            if ($t !== '') $rawLines[] = $t;
+        }
+        if (empty($rawLines)) { return; }
+
+        // Parse each line with v2 (falls back to mod-adapter)
+        $parsed = [];
+        foreach ($rawLines as $line) {
+            if (class_exists('\\Skipintro\\RecipeCrawler\\Parser\\Filters\\Ingredient_Text_Normalizer')) {
+                $line = \Skipintro\RecipeCrawler\Parser\Filters\Ingredient_Text_Normalizer::normalize($line);
+            }
+            $res = null;
+            if (function_exists('sitc_ing_v2_parse_line')) {
+                $res = @sitc_ing_v2_parse_line($line, 'de');
+            } elseif (function_exists('sitc_ing_parse_line_mod')) {
+                $res = @sitc_ing_parse_line_mod($line, 'de');
+            }
+            if (is_array($res)) {
+                $parsed[] = [
+                    'raw'  => $line,
+                    'qty'  => $res['qty']  ?? null,
+                    'unit' => $res['unit'] ?? null,
+                    'item' => $res['item'] ?? ($res['name'] ?? null),
+                    'note' => $res['note'] ?? null,
+                ];
+            } else {
+                $parsed[] = ['raw'=>$line, 'qty'=>null, 'unit'=>null, 'item'=>$line, 'note'=>null];
+            }
+        }
+
+        // Backup + write back to schema (cause fix for future renders that read schema)
+        $stamp = gmdate('Ymd_His');
+        add_post_meta($post_id, $schema_key . '_bak_' . $stamp, $old_json);
+        $schema['recipeIngredient']  = $parsed;
+        $schema['ingredientsParsed'] = $parsed;
+
+        $new_json = wp_json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (is_string($new_json) && $new_json !== '') {
+            update_post_meta($post_id, $schema_key, $new_json);
+        }
+
+        // Optional: mark parser version (hilft später bei gezielten Rewrites)
+        update_post_meta($post_id, '_sitc_parser_version', '0.6.01');
+    }
+
+    // Hook into your refresh/import pipeline.
+    // Passe den Hook an deine tatsächliche Refresh-Stelle an (z. B. eigener Action/Filter).
+    add_action('sitc_after_refresh', 'sitc_refresh_force_v2_parser', 10, 1);
+    // Fallback: beim manuellen Aktualisieren (nur wenn sinnvoll)
+    add_action('save_post', function ($post_id, $post) {
+        if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) return;
+        // Optional: nur laufen lassen, wenn ein spezieller Query-Param gesetzt ist, um nicht alles zu berühren:
+        if (!isset($_GET['sitc_fix_v2']) || $_GET['sitc_fix_v2'] !== '1') return;
+        sitc_refresh_force_v2_parser((int)$post_id);
+    }, 10, 2);
+}

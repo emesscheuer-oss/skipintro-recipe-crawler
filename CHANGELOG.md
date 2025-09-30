@@ -1,7 +1,10 @@
-<!-- SITC_CHANGELOG_TOP: new entries must be inserted BELOW this line -->
-
-## [WIP] – in Arbeit
-(n/a – ehemals hier gelistete Punkte sind in 0.6.0.0 enthalten.)
+## 0.6.01 — 2025-09-29
+- Refresh nutzt nun Parser **v2 + Normalizer** auf gespeicherten **RAW**-Zeilen.
+- Schreibt `_sitc_schema_recipe_json` (Felder `recipeIngredient` + `ingredientsParsed`) **neu** und legt **Backups** an.
+- Materialisiert `_sitc_ingredients_struct` aus dem aktualisierten Schema (ebenfalls mit Backup).
+- **Legacy-Debug-Endpunkte** hinter Flag `SITC_DEBUG_TOOLS` deaktiviert (standardmäßig **off**).
+- Keine Änderungen an der **QTY-/Einheiten-Logik**.
+- Fixes verifizieren u. a. „**Salz & Pfeffer**“ sowie mengenlose Zutaten ohne „0“-Artefakt; Umlaute bleiben korrekt.
 
 ## [0.6.00] - 2025-09-23 12:00 Europe/Berlin
 ### Added

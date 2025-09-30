@@ -1,0 +1,155 @@
+<?php
+/**
+ * Ingredient Text Normalizer (pre-QTY/Unit)
+ *
+ * Version: 0.6.00
+ * Scope:    Nur Text-Bereinigung/Normalisierung VOR der Mengen-/Einheitenlogik.
+ * Ziel:     (a) Komma-Listen nicht zu Notes einklammern
+ *           (b) Ampersand/und nie LHS verlieren
+ *           (c) Leit-Substantive wie "Saft" nicht strippen
+ *
+ * Einbindung: Vor dem eigentlichen Parser aufrufen:
+ *   $line = \Skipintro\RecipeCrawler\Parser\Filters\Ingredient_Text_Normalizer::normalize($raw_line);
+ *   // Danach erst: QTY/Unit-Detection & Tokenizer
+ *
+ * Achtung: QTY/Unit-Code bleibt unberührt.
+ */
+
+declare(strict_types=1);
+
+namespace Skipintro\RecipeCrawler\Parser\Filters;
+
+final class Ingredient_Text_Normalizer
+{
+    /**
+     * Wörter, die häufig als LEIT-SUBSTANTIV auftreten und NICHT gelöscht werden dürfen.
+     * Beispiel: "Saft einer halben Zitrone", "Schale einer Bio-Zitrone", "Abrieb einer Limette".
+     */
+    private const HEAD_NOUN_WHITELIST = [
+        'saft','schale','abrieb','zesten','mark','filets','kerne','blätter'
+    ];
+
+    /**
+     * Phrasen, die wirklich (!) Note/Anmerkung bedeuten, wenn sie nachgestellt sind.
+     * Nur diese dürfen via Komma zu "(…)" umgeformt werden – alles andere bleibt Liste.
+     */
+    private const NOTE_HINTS = [
+        'optional','nach geschmack','zum abschmecken','falls vorhanden','nach belieben',
+        'oder','bzw.','alternativ','ggf.','wenn möglich','bei bedarf'
+    ];
+
+    /**
+     * Haupteinstieg: Normalisiert eine einzelne Zutatenzeile.
+     * - Entfernt keine Mengen/Einheiten
+     * - Liefert String zurück (kein Split in mehrere Zeilen; Überlassen wir weiterem Pipeline-Step)
+     */
+    public static function normalize(string $line): string
+    {
+        $original = $line;
+        $line = self::basicTrim($line);
+
+        if ($line === '') {
+            return $line;
+        }
+
+        // 1) Ampersand/Und: nie LHS verlieren (robuster Trim & Anti-Regex-Falle)
+        $line = self::fixAmpersandLoss($line);
+
+        // 2) Komma-Listen nicht zu Klammer-Notes degradieren – außer echte Note-Hints
+        $line = self::protectCommaListsFromNoteCollapse($line);
+
+        // 3) Leit-Substantive (Saft/Schale/…) bewahren – nie als "Füllwort" strippen
+        $line = self::preserveHeadNouns($line);
+
+        // 4) Typische Doppelspaces & Typografie-Dashes sauberziehen (ohne Semantik zu verändern)
+        $line = self::tidyWhitespaceAndDashes($line);
+
+        // Fallback: Nie schlechter als vorher
+        return ($line !== '') ? $line : $original;
+    }
+
+    private static function basicTrim(string $t): string
+    {
+        // Normalisiere Leerzeichen & Zero-Width chars am Rand
+        $t = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]+/u', '', $t); // zero-width
+        $t = preg_replace('/\s+/u', ' ', $t ?? '');
+        return trim((string)$t);
+    }
+
+    /**
+     * Fix 2): „Salz & Pfeffer“ darf nie zu „& Pfeffer“ werden.
+     * Ursache in der Praxis: aggressive Regexe, die bis zum ersten Joiner cutten.
+     */
+    private static function fixAmpersandLoss(string $t): string
+    {
+        // Leading-Joiner entschärfen: falls Zeile fälschlich mit "& " oder "und " beginnt.
+        if (preg_match('/^\s*(?:&|und)\s+\p{L}+/ui', $t)) {
+            $t = preg_replace('/^\s*(?:&|und)\s+/ui', '', $t);
+        }
+        return $t;
+    }
+
+    /**
+     * Fix 1): Komma-Listen werden fälschlich zu "(...)" Note umgeformt.
+     * Regel:
+     *  - Wir erlauben Komma->Note NUR, wenn der nachgestellte Teil klare Note-Hints enthält.
+     *  - Andernfalls bleibt der Text eine Liste (kommagetrennt).
+     */
+    private static function protectCommaListsFromNoteCollapse(string $t): string
+    {
+        if (strpos($t, ',') === false) {
+            return $t;
+        }
+
+        $parts = array_map('trim', explode(',', $t));
+        if (count($parts) < 2) {
+            return $t;
+        }
+
+        $hasNoteHint = false;
+        foreach ($parts as $p) {
+            $lp = mb_strtolower($p, 'UTF-8');
+            foreach (self::NOTE_HINTS as $hint) {
+                if (mb_strpos($lp, $hint) !== false) {
+                    $hasNoteHint = true;
+                    break 2;
+                }
+            }
+        }
+
+        if ($hasNoteHint) {
+            // z.B. "Chili, optional" -> "Chili (optional)"
+            $last = array_pop($parts);
+            $lead = implode(', ', $parts);
+            if (!preg_match('/\)\s*$/', $lead) && !preg_match('/^\(.*\)$/', $last)) {
+                return $lead . ' (' . $last . ')';
+            }
+            return $t;
+        }
+
+        return $t;
+    }
+
+    /**
+     * Fix 3): Head-Nouns wie "Saft", "Schale", "Abrieb" nicht entfernen.
+     */
+    private static function preserveHeadNouns(string $t): string
+    {
+        if (!preg_match('/^\p{L}+/u', $t, $m)) {
+            return $t;
+        }
+
+        $first = mb_strtolower($m[0], 'UTF-8');
+        if (in_array($first, self::HEAD_NOUN_WHITELIST, true)) {
+            return $t;
+        }
+        return $t;
+    }
+
+    private static function tidyWhitespaceAndDashes(string $t): string
+    {
+        $t = preg_replace('/\s*[-–—]\s*/u', ' - ', $t);
+        $t = preg_replace('/\s{2,}/u', ' ', $t);
+        return trim($t);
+    }
+}
