@@ -1,8 +1,8 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// Ensure media helpers are available (sitc_set_featured_image, etc.)
-if (!function_exists('sitc_set_featured_image')) {
+// Ensure media helpers are available (sitc_maybe_set_featured_image, etc.)
+if (!function_exists('sitc_maybe_set_featured_image')) {
     $__sitc_media = __DIR__ . '/../media.php';
     if (is_file($__sitc_media)) {
         require_once $__sitc_media;
@@ -151,7 +151,8 @@ function sitc_render_importer_page() {
                 }
 
                 $image_url = !empty($recipe['image']) ? $recipe['image'] : '';
-                if (function_exists('sitc_set_featured_image')) { sitc_set_featured_image($post_id, $image_url, $all_cats); }
+                if (function_exists('sitc_maybe_set_featured_image')) { sitc_maybe_set_featured_image($post_id, $image_url); }
+                sitc_after_ingest((int)$post_id);
 
                 $html .= '<div class="notice notice-success"><p>Rezept erfolgreich erstellt! ID: ' . (int)$post_id . '</p></div>';
             } else {
@@ -166,3 +167,4 @@ function sitc_render_importer_page() {
 
     echo $html;
 }
+

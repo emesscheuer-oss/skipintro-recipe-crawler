@@ -346,7 +346,7 @@ function sitc_handle_refresh_recipe() {
         $detail .= '<p style="margin:6px 0 0;color:#a00;">' . esc_html(implode(' ', $warnings)) . '</p>';
     }
     // v2: Schema neu schreiben + Struct materialisieren
-	sitc_refresh_current_post_v2($post_id, false);
+    sitc_after_ingest((int)$post_id);
 
 	sitc_store_admin_notice('success', $summary, $detail);
 

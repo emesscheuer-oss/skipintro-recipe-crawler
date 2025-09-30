@@ -115,15 +115,8 @@ function sitc_render_import_form() {
 
                 $image_url = !empty($recipe['image']) ? $recipe['image'] : '';
                 sitc_maybe_set_featured_image($post_id, $image_url);
-                // --- Harmonisierung wie beim Refresh (v2 + Normalizer) ---
-                if (function_exists('sitc_refresh_current_post_v2')) {
-                    sitc_refresh_current_post_v2((int)$post_id, false);
-                }
+                sitc_after_ingest((int)$post_id);
 
-                // --- Fallback-Thumbnail sicherstellen ---
-                if (function_exists('sitc_assign_fallback_thumbnail_if_missing')) {
-                    sitc_assign_fallback_thumbnail_if_missing((int)$post_id);
-                }
 
                 $html .= '<div class="sitc-success">Rezept importiert! <a href="' . esc_url(get_permalink($post_id)) . '">ansehen</a></div>';
             } else {
@@ -137,3 +130,4 @@ function sitc_render_import_form() {
     return $html;
 }
 add_shortcode('sitc_import_form', 'sitc_render_import_form');
+

@@ -10,7 +10,7 @@ Text Domain: skipintro
 
 if (!defined('ABSPATH')) exit;
 
-// FRONTEND Output-Guard: entfernt fÃ¼hrende Whitespaces/BOM-Ausgaben vor dem ersten Output.
+// FRONTEND Output-Guard: entfernt fuehrende Whitespaces/BOM-Ausgaben vor dem ersten Output.
 add_action('init', function () {
     if (is_admin()) return;
     if (!defined('SITC_OB_GUARD')) define('SITC_OB_GUARD', true);
@@ -19,7 +19,7 @@ add_action('init', function () {
             static $seen = false;
             if (!$seen) {
                 $seen = true;
-                // Nur fÃ¼hrende Whitespaces kappen; echten Inhalt unverÃ¤ndert ausgeben.
+                // Nur fuehrende Whitespaces kappen; echten Inhalt unveraendert ausgeben.
                 $trim = ltrim($buf);
                 return $trim;
             }
@@ -38,7 +38,9 @@ add_action('plugins_loaded', function () {
     // Debug logger (dev-only)
     require_once $base . 'includes/debug.php';
     // Media helpers (featured image)
-    require_once $base . 'includes/media.php';    // Toggle for legacy debug endpoints (enable manually when needed)
+    require_once $base . 'includes/media.php';
+    require_once $base . 'includes/ingest_postprocess.php';
+    // Toggle for legacy debug endpoints (enable manually when needed)
     if (!defined('SITC_DEBUG_TOOLS')) {
         define('SITC_DEBUG_TOOLS', false);
     }
@@ -60,7 +62,7 @@ add_action('plugins_loaded', function () {
         require_once $base . 'includes/Admin/ValidationRunner.php';
         require_once $base . 'includes/Admin/ValidationPage.php';
 
-        // Admin-MenÃ¼ nur im Admin registrieren.
+        // Admin-Menue nur im Admin registrieren.
         add_action('admin_menu', function() {
             add_submenu_page(
                 'edit.php',
@@ -85,3 +87,4 @@ add_action('plugins_loaded', function () {
 		require_once $base . '/colibriwp-adjustments-and-features/colibriwp-features.php';
     }
 });
+
