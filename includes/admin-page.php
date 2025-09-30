@@ -152,9 +152,12 @@ function sitc_render_importer_page() {
 
                 $image_url = !empty($recipe['image']) ? $recipe['image'] : '';
                 if (function_exists('sitc_maybe_set_featured_image')) { sitc_maybe_set_featured_image($post_id, $image_url); }
-                sitc_after_ingest((int)$post_id);
 
                 $html .= '<div class="notice notice-success"><p>Rezept erfolgreich erstellt! ID: ' . (int)$post_id . '</p></div>';
+
+                error_log('SITC import pre-after_ingest for post ' . (int)$post_id);
+                sitc_after_ingest((int)$post_id);
+                error_log('SITC import post-after_ingest for post ' . (int)$post_id);
             } else {
                 $html .= '<div class="notice notice-error"><p>Fehler beim Erstellen des Beitrags.</p></div>';
             }

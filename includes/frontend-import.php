@@ -115,10 +115,12 @@ function sitc_render_import_form() {
 
                 $image_url = !empty($recipe['image']) ? $recipe['image'] : '';
                 sitc_maybe_set_featured_image($post_id, $image_url);
-                sitc_after_ingest((int)$post_id);
-
 
                 $html .= '<div class="sitc-success">Rezept importiert! <a href="' . esc_url(get_permalink($post_id)) . '">ansehen</a></div>';
+
+                error_log('SITC import pre-after_ingest for post ' . (int)$post_id);
+                sitc_after_ingest((int)$post_id);
+                error_log('SITC import post-after_ingest for post ' . (int)$post_id);
             } else {
                 $html .= '<div class="sitc-error">Fehler beim Erstellen des Beitrags.</div>';
             }
