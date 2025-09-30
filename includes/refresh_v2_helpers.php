@@ -5,7 +5,7 @@
 if (!defined('ABSPATH')) exit;
 
 /**
- * Skipintro Recipe Crawler — Refresh v2 Helpers (ohne UI / Metabox)
+ * Skipintro Recipe Crawler Ã¢â‚¬â€ Refresh v2 Helpers (ohne UI / Metabox)
  * - Re-parst gespeicherte RAW-Zeilen mit Parser v2 + Normalizer
  * - Schreibt _sitc_schema_recipe_json (recipeIngredient + ingredientsParsed) mit Backup
  * - Materialisiert _sitc_ingredients_struct mit Backup
@@ -166,6 +166,26 @@ if (!function_exists('sitc_refresh_materialize_struct_from_schema')) {
     }
 }
 
+if (!function_exists('sitc__looks_like_qty')) {
+    function sitc__looks_like_qty(
+q): bool {
+        if (
+q === null) return false;
+        
+s = is_array(
+q) ? (
+q['raw'] ?? 
+q['value'] ?? '') : (string)
+q;
+        
+s = trim((string)
+s);
+        if (
+s === '') return false;
+        return (bool) preg_match('/^(?:\d+(?:[.,]\d+)?|\d+\s*\/\s*\d+)(?:\s*-\s*(?:\d+(?:[.,]\d+)?|\d+\s*\/\s*\d+))?$/u', 
+s);
+    }
+}
 if (!function_exists('sitc_refresh_current_post_v2')) {
     /**
      * Public helper: rewrite schema with v2 + materialize struct.
